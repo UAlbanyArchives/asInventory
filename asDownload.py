@@ -116,10 +116,10 @@ class getCmpntDialog(wx.Dialog):
 		else:
 			level = "archivalObject"
 		if len(cmpntID) < 1:
-			noIDNotice = wx.MessageDialog(None, 'Please Enter a Ref ID for an Archival Objector an id_0 for a Resource.', 'Missing ID', wx.OK | wx.ICON_EXCLAMATION | wx.STAY_ON_TOP)
+			noIDNotice = wx.MessageDialog(None, 'Please Enter a Ref ID for an Archival Objector an id_0 for a Resource.', 'Missing ID', wx.OK | wx.ICON_EXCLAMATION )
 			noIDNotice.ShowModal()
 		elif level == "archivalObject" and len(cmpntID) != 32:
-			wrongIDNotice = wx.MessageDialog(None, 'It looks like you selcted archival object, but this is not an archival object ref_id. Check that you have the correct ID or select resource instead.', 'Incorrect ID', wx.OK | wx.ICON_EXCLAMATION | wx.STAY_ON_TOP)
+			wrongIDNotice = wx.MessageDialog(None, 'It looks like you selcted archival object, but this is not an archival object ref_id. Check that you have the correct ID or select resource instead.', 'Incorrect ID', wx.OK | wx.ICON_EXCLAMATION)
 			wrongIDNotice.ShowModal()
 		else:
 
@@ -132,25 +132,27 @@ class getCmpntDialog(wx.Dialog):
 			# busy dialog
 			self.Hide()
 			msg = "Please wait while we export the data you requested from ArchivesSpace..."
-			busyDlg = wx.BusyInfo(msg)
+			#busyDlg = wx.BusyInfo(msg)
 			
 			output = ""
 			for line in iter(asDownload.stdout.readline, ""):
-				print line,
+				print (line)
 				output += line
 				
 			asDownload.wait()
 			exitCode = asDownload.returncode
-			busyDlg = None
+			#busyDlg = None
 			if exitCode == 0:
-				successNotice = wx.MessageDialog(None, "Export Successful.\n\nSuccessfully exported archival object from ArchivesSpace to spreadsheet at " + masterPath + ".\n\nWould you like to open the ouput folder?" , 'Export Successful', wx.YES_NO | wx.ICON_INFORMATION | wx.STAY_ON_TOP)
+				successNotice = wx.MessageDialog(None, "Export Successful.\n\nSuccessfully exported archival object from ArchivesSpace to spreadsheet at " + masterPath + ".\n\nWould you like to open the ouput folder?" , 'Export Successful', wx.YES_NO | wx.ICON_INFORMATION)
 				successResponse = successNotice.ShowModal()
 				if successResponse == wx.ID_YES:
 					openCmd = "start " + outputPath
 					openDir = Popen(openCmd, shell=True, stdout=PIPE, stderr=PIPE)
 					stdout, stderr = openDir.communicate()
+					print stdout
+					print stderr
 			else:
-				errorNotice = wx.MessageDialog(None, "Error exporting archival object from ArchivesSpace. Please check error.log for more details.", 'Export Error', wx.OK | wx.ICON_ERROR | wx.STAY_ON_TOP)
+				errorNotice = wx.MessageDialog(None, "Error exporting archival object from ArchivesSpace. Please check error.log for more details.", 'Export Error', wx.OK | wx.ICON_ERROR )
 				errorNotice.ShowModal()
 				
 			self.Destroy()

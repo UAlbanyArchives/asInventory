@@ -1,9 +1,12 @@
+print ("Loading dependancies...")
 import os
 import sys
 from archives_tools import aspace as AS
+from archives_tools import uaLocations
 import openpyxl
 import traceback
 import datetime
+import shutil
 
 
 def updateDate(fileObject, normal, display):
@@ -110,7 +113,8 @@ try:
 			resourceTree = AS.getTree(session, object, loginData)
 			childrenList = resourceTree.children
 		else:
-			childrenList = AS.getChildren(session, object, loginData)
+			childTree = AS.getChildren(session, object, loginData)
+			childrenList = childTree.children
 			
 		lineCount = 6
 		for child in childrenList:
@@ -118,7 +122,10 @@ try:
 			lineCount = lineCount + 1
 			worksheet["A" + str(lineCount)] = childObject.ref_id
 			worksheet["I" + str(lineCount)] = childObject.title
-			print ("	exporting " + childObject.title)
+			try:
+				print ("	exporting " + childObject.title)
+			except:
+				print ("	exporting non-ascii file...")
 			sys.stdout.flush()
 			
 			# containers and locations		 
@@ -141,7 +148,13 @@ try:
 						locationCount = locationCount + 1
 						locationObject = AS.getLocation(session, location.ref, loginData)
 						if "area" in locationObject.keys():
-							locationCoordinates = locationObject.area + "-" + locationObject.coordinate_1_indicator + "-" + locationObject.coordinate_2_indicator + "-" + locationObject.coordinate_3_indicator
+							locationCoordinates = locationObject.area + "-" + locationObject.coordinate_1_indicator
+						else:
+							locationCoordinates = locationObject.room + "-" + locationObject.coordinate_1_indicator
+						if "coordinate_2_indicator" in locationObject.keys():
+							locationCoordinates = locationCoordinates + "-" + locationObject.coordinate_2_indicator
+						if "coordinate_3_indicator" in locationObject.keys():
+							locationCoordinates = locationCoordinates + "-" + locationObject.coordinate_3_indicator
 						if locationCount < 2:
 							worksheet["B" + str(lineCount)] = locationObject.uri
 							worksheet["C" + str(lineCount)] = locationCoordinates
@@ -241,6 +254,8 @@ try:
 		password = sys.argv[7]
 		loginData = (baseURL, user, password)
 		
+		print ("Reading input directory...")
+		sys.stdout.flush()
 		for spreadFile in os.listdir(inputPath):
 			
 			#find and load sheets
@@ -287,7 +302,7 @@ try:
 							resourceLevel = True
 							print ("Looking for resource matching " + displayName + "...")
 							sys.stdout.flush()
-							object = getResourceID(session, repository, refID, loginData)
+							object = AS.getResourceID(session, repository, refID, loginData)
 							resourceURI = object.uri
 							print ("Found " + object.title)
 							sys.stdout.flush()
@@ -302,6 +317,7 @@ try:
 							sys.stdout.flush()
 							
 							
+						boxSession = {}
 						rowCount = 0
 						for row in sheet.rows:
 							rowCount = rowCount + 1
@@ -325,8 +341,10 @@ try:
 										fileObject = AS.getArchObjID(session, repository, str(row[0].value).strip(), loginData)
 										
 									#set title and position
-									fileObject.title = str(row[8].value)
+									fileObject.title = row[8].value
+									#print (str(row[8].value) + " --> position " + str(fileCount) )
 									fileObject.position = int(fileCount)
+									#print (fileObject.position)
 									#clear dates
 									fileObject.dates = []
 									
@@ -377,9 +395,12 @@ try:
 									#containers
 									if not row[4].value is None and not row[5].value is None:
 										#if there is container info entered in spreadsheet
-										if not row[3].value is None:
+										if not row[3].value is None or str(row[4].value) + " " + str(row[5].value) in boxSession.keys():
 											#existing container
-											boxUri = str(row[3].value).strip()
+											if row[3].value is None:
+												boxUri = boxSession[str(row[4].value) + " " + str(row[5].value)]
+											else:
+												boxUri = str(row[3].value).strip()
 											boxObject = AS.getContainer(session, boxUri, loginData)
 											#look for existing box link
 											foundBox = False
@@ -394,24 +415,24 @@ try:
 											fileObject.instances = newInstances
 											if foundBox == False:
 												#link to existing box
-												fileObject = AS.addToContainer(session, fileObject, boxUri, loginData)
+												fileObject = AS.addToContainer(session, fileObject, boxUri, None, None, loginData)
 												
 											#modify existing box
 											for instance in fileObject.instances:
 												if "sub_container" in instance.keys():
-													if instance.sub_container.top_container.ref == boxUri:
+													if instance["sub_container"]["top_container"]["ref"] == boxUri:
 														if not row[4].value is None:
-															instance.container.type_1 = str(row[4].value).strip()
+															instance["container"]["type_1"] = str(row[4].value).strip()
 															boxObject.type = str(row[4].value).strip()
 														if not row[5].value is None:
-															instance.container.indicator_1 = str(row[5].value).strip()
+															instance["container"]["indicator_1"] = str(row[5].value).strip()
 															boxObject.indicator = str(row[5].value).strip()
 														if not row[6].value is None:
-															instance.container.type_2 = str(row[6].value).strip()
-															instance.sub_container.type_2 = str(row[6].value).strip()
+															instance["container"]["type_2"] = str(row[6].value).strip()
+															instance["sub_container"]["type_2"] = str(row[6].value).strip()
 														if not row[7].value is None:
-															instance.container.indicator_2 = str(row[7].value).strip()
-															instance.sub_container.indicator_2 = str(row[7].value).strip()
+															instance["container"]["indicator_2"] = str(row[7].value).strip()
+															instance["sub_container"]["indicator_2"] = str(row[7].value).strip()
 											#add any restrictions to box
 											if not row[19].value is None:
 												boxObject.restricted = True
@@ -427,8 +448,13 @@ try:
 													if locTest == False:
 														boxObject = AS.addToLocation(boxObject, locationURI)
 											elif not row[2].value is None:
+												#remove existing locations
+												boxObject.container_locations = []
+												
 												#location, but without URI
+												locCount = 0
 												for locationSet in str(row[2].value).split(";"):
+													locCount = locCount + 1
 													if "(" in locationSet:
 														coordinates = locationSet.split("(")[0].strip()
 														locationNote = locationSet.split("(")[1].replace(")", "").strip()
@@ -436,30 +462,43 @@ try:
 														coordinates = locationSet.strip()
 														locationNote = None
 													
-													from uaLocations import location2ASpace
-													coordList = location2ASpace(coordinates.strip(), locationNote)
+													coordList = uaLocations.location2ASpace(coordinates.strip(), locationNote)
 													if coordList[1] is False:
 														#single location
 														locTitle = coordList[0]["Title"]
 														locationURI = AS.findLocation(session, locTitle, loginData)
 														if len(coordList[0]["Note"]) > 0:
-															boxObject = AS.addToLocation(boxObject, locationURI, coordList[0]["Note"])
+															if locCount > 1:
+																boxObject = AS.addToLocation(boxObject, locationURI, coordList[0]["Note"], "previous", "2999-01-01")
+															else:
+																boxObject = AS.addToLocation(boxObject, locationURI, coordList[0]["Note"])
 														else:
-															boxObject = AS.addToLocation(boxObject, locationURI)
+															if locCount > 1:
+																boxObject = AS.addToLocation(boxObject, locationURI, None, "previous", "2999-01-01")
+															else:
+																boxObject = AS.addToLocation(boxObject, locationURI)
 													else:
 														#multiple locations
 														for location in coordList[0]:
 															locTitle = location["Title"]
 															locationURI = AS.findLocation(session, locTitle, loginData)
 															if len(location["Note"]) > 0:
-																boxObject = AS.addToLocation(boxObject, locationURI, location["Note"])
+																if locCount > 1:
+																	boxObject = AS.addToLocation(boxObject, locationURI, location["Note"], "previous", "2999-01-01")
+																else:
+																	boxObject = AS.addToLocation(boxObject, locationURI, location["Note"])
 															else:
-																boxObject = AS.addToLocation(boxObject, locationURI)
+																if locCount > 1:
+																	boxObject = AS.addToLocation(boxObject, locationURI, None, "previous", "2999-01-01")
+																else:
+																	boxObject = AS.addToLocation(boxObject, locationURI)
 												print ("		Added location(s) to containers")
 												sys.stdout.flush()
 													
 											
 										else:
+											#new box
+											
 											#delete existing boxes
 											newInstances = []
 											for instance in fileObject.instances:
@@ -470,7 +509,9 @@ try:
 											fileObject.instances = newInstances
 											#makes and posts a new container
 											boxObject = AS.makeContainer(session, repository, str(row[4].value), str(row[5].value), loginData)
-											fileObject = AS.addToContainer(session, fileObject, boxObject.uri, str(row[6].value), str(row[7].value), loginData)
+											#update dict of new boxes for this sheet
+											boxSession[str(row[4].value) + " " + str(row[5].value)] = boxObject.uri
+											fileObject = AS.addToContainer(session, fileObject, boxObject.uri, row[6].value,  row[7].value, loginData)
 											#add any restrictions to box
 											if not row[19].value is None:
 												boxObject.restricted = True
@@ -485,8 +526,13 @@ try:
 													if locTest == False:
 														boxObject = AS.addToLocation(boxObject, locationURI)
 											elif not row[2].value is None:
+												#remove existing locations from boxObject
+												boxObject.container_locations = []
+											
 												#location, but without URI
+												locCount = 0
 												for locationSet in str(row[2].value).split(";"):
+													locCount = locCount + 1
 													if "(" in locationSet:
 														coordinates = locationSet.split("(")[0].strip()
 														locationNote = locationSet.split("(")[1].replace(")", "").strip()
@@ -494,25 +540,36 @@ try:
 														coordinates = locationSet.strip()
 														locationNote = None
 													
-													from uaLocations import location2ASpace
-													coordList = location2ASpace(coordinates.strip(), locationNote)
+													coordList = uaLocations.location2ASpace(coordinates.strip(), locationNote)
 													if coordList[1] is False:
 														#single location
 														locTitle = coordList[0]["Title"]
 														locationURI = AS.findLocation(session, locTitle, loginData)
 														if len(coordList[0]["Note"]) > 0:
-															boxObject = AS.addToLocation(boxObject, locationURI, coordList[0]["Note"])
+															if locCount > 1:
+																boxObject = AS.addToLocation(boxObject, locationURI, coordList[0]["Note"], "previous", "2999-01-01")
+															else:
+																boxObject = AS.addToLocation(boxObject, locationURI, coordList[0]["Note"])
 														else:
-															boxObject = AS.addToLocation(boxObject, locationURI)
+															if locCount > 1:
+																boxObject = AS.addToLocation(boxObject, locationURI, None, "previous", "2999-01-01")
+															else:
+																boxObject = AS.addToLocation(boxObject, locationURI)
 													else:
 														#multiple locations
 														for location in coordList[0]:
 															locTitle = location["Title"]
 															locationURI = AS.findLocation(session, locTitle, loginData)
 															if len(location["Note"]) > 0:
-																boxObject = AS.addToLocation(boxObject, locationURI, location["Note"])
+																if locCount > 1:
+																	boxObject = AS.addToLocation(boxObject, locationURI, location["Note"], "previous", "2999-01-01")
+																else:
+																	boxObject = AS.addToLocation(boxObject, locationURI, location["Note"])
 															else:
-																boxObject = AS.addToLocation(boxObject, locationURI)
+																if locCount > 1:
+																	boxObject = AS.addToLocation(boxObject, locationURI, None, "previous", "2999-01-01")
+																else:
+																	boxObject = AS.addToLocation(boxObject, locationURI)
 												print ("		Added location(s) to containers")
 												sys.stdout.flush()
 											
@@ -529,12 +586,23 @@ try:
 									#post file object
 									postAO = AS.postArchObj(session, repository, fileObject, loginData)
 									if postAO == 200:
-										print ("	Posted " + row[8].value)
+										try:
+											print ("	Posted " + row[8].value)
+										except:
+											print ("	Posted non-ascii text")
 									else:
 										print ("	Failed to post, error code " + str(postAO))
 									sys.stdout.flush()
-						
-				
+									
+				wb._archive.close()
+				print ("Moving " + spreadFile + " to complete directory...")
+				sys.stdout.flush()
+				completeDir = os.path.join(os.path.dirname(inputPath), "complete")
+				if os.path.isfile(os.path.join(completeDir, spreadFile)):
+					shutil.copy2(os.path.join(inputPath, spreadFile), os.path.join(completeDir, os.path.splitext(spreadFile)[0] + str(datetime.datetime.now()).split(".")[0].replace(":", "_") + ".xlsx"))		
+				else:
+					shutil.copy2(os.path.join(inputPath, spreadFile), completeDir)
+				os.remove(os.path.join(inputPath, spreadFile))
 			else:
 				print ("ERROR: incorrect file " + spreadFile + " in input path.")
 		
