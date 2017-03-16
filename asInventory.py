@@ -511,7 +511,15 @@ try:
 											boxObject = AS.makeContainer(session, repository, str(row[4].value), str(row[5].value), loginData)
 											#update dict of new boxes for this sheet
 											boxSession[str(row[4].value) + " " + str(row[5].value)] = boxObject.uri
-											fileObject = AS.addToContainer(session, fileObject, boxObject.uri, row[6].value,  row[7].value, loginData)
+											if not row[6].value is None:
+												childContainer = str(row[6].value)
+											else:
+												childContainer = None
+											if not row[7].value is None:
+												childIndicator = str(row[7].value)
+											else:
+												childIndicator = None
+											fileObject = AS.addToContainer(session, fileObject, boxObject.uri, childContainer,  childIndicator, loginData)
 											#add any restrictions to box
 											if not row[19].value is None:
 												boxObject.restricted = True
@@ -615,7 +623,8 @@ except:
 	exceptMsg = traceback.format_exc()
 	print (exceptMsg)
 	errorOutput = "\n" + "#############################################################\n" + str(datetime.datetime.now()) + "\n#############################################################\n" + str(exceptMsg) + "\n********************************************************************************"
-	file = open("error.log", "a")
+	__location__ = os.path.dirname(os.path.abspath(__file__))
+	file = open(os.path.join(__location__, "error.log"), "a")
 	file.write(errorOutput)
 	file.close()
 	sys.exit(3)	
