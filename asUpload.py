@@ -1,6 +1,6 @@
 import os
 import ConfigParser
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, STDOUT
 import wx
 
 __location__ = os.path.dirname(os.path.abspath(__file__))
