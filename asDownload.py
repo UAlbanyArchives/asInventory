@@ -3,6 +3,8 @@ import sys
 import ConfigParser
 from subprocess import Popen, PIPE, STDOUT
 import wx
+import datetime
+import shutil
 
 # GUI Dialog to get Level and ID to Export
 class getCmpntDialog(wx.Dialog):
@@ -101,8 +103,29 @@ class getCmpntDialog(wx.Dialog):
 		repository = config.get('ArchivesSpace', 'repository')
 		user = config.get('ArchivesSpace', 'user')
 		password = config.get('ArchivesSpace', 'password')
-
+		
+		#check if asInventory is updated
 		masterPath = config.get('asInventory', 'path')
+		masterFile = ""
+		for file in os.listdir(masterPath):
+			if file.startswith("asInventory") and file.endswith(".exe"):
+				masterFile = file
+		if len(masterFile) == 0:
+			errorNotice = wx.MessageDialog(None, "Error: Could not find master asInventory file in " + masterPath, 'No Master File', wx.OK | wx.ICON_ERROR )
+			errorNotice.ShowModal()
+		masterVersion = os.path.splitext(masterFile)[0].split("-")[1]
+		localFile = ""
+		for file in os.listdir(__location__):
+			if file.startswith("asInventory") and file.endswith(".exe"):
+				localFile = file
+		localVersion = os.path.splitext(localFile)[0].split("-")[1]
+		if masterVersion > localVersion:
+			print "Updating asInventory"
+			os.remove(os.path.join(__location__, localFile))
+			shutil.copy2(os.path.join(masterPath, masterFile), __location__)
+			asInventory = os.path.join(__location__, masterFile)
+		else:
+			asInventory = os.path.join(__location__, localFile)
 
 		# output path
 		outputPath = os.path.join(__location__, "output")
@@ -124,22 +147,22 @@ class getCmpntDialog(wx.Dialog):
 		else:
 
 			#build command list
-			cmd = [masterPath, "-download", outputPath, level, cmpntID, baseURL, repository, user, password]
-
+			cmd = [asInventory, "-download", outputPath, level, cmpntID, baseURL, repository, user, password]
 			# call master asInventory
+			#print cmd
 			asDownload = Popen(cmd, shell=True, stdout=PIPE, stderr=STDOUT)
 			
 			# busy dialog
 			self.Hide()
 			msg = "Please wait while we export the data you requested from ArchivesSpace..."
+			print (msg)
 			#busyDlg = wx.BusyInfo(msg)
 			
+			asDownload.wait()
 			output = ""
 			for line in iter(asDownload.stdout.readline, ""):
 				print (line)
 				output += line
-				
-			asDownload.wait()
 			exitCode = asDownload.returncode
 			#busyDlg = None
 			if exitCode == 0:
@@ -152,7 +175,12 @@ class getCmpntDialog(wx.Dialog):
 					print stdout
 					print stderr
 			else:
-				errorNotice = wx.MessageDialog(None, "Error exporting archival object from ArchivesSpace. Please check error.log for more details.", 'Export Error', wx.OK | wx.ICON_ERROR )
+				outputText = "asDownload error: " + output
+				errorOutput = "\n" + "#############################################################\n" + str(datetime.datetime.now()) + "\n#############################################################\n" + outputText + "\n********************************************************************************"
+				file = open(os.path.join(__location__, "error.log"), "a")
+				file.write(errorOutput)
+				file.close()
+				errorNotice = wx.MessageDialog(None, "Error exporting archival object from ArchivesSpace. Please check error.log for more details. " + output, 'Export Error', wx.OK | wx.ICON_ERROR )
 				errorNotice.ShowModal()
 				
 			self.Destroy()

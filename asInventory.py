@@ -8,7 +8,6 @@ import traceback
 import datetime
 import shutil
 
-
 def updateDate(fileObject, normal, display):
 	if display.lower().strip() == "none":
 		display = ""
@@ -392,6 +391,8 @@ try:
 										fileObject.restrictions_apply = True
 										fileObject = AS.makeMultiNote(fileObject, "accessrestrict", str(row[19].value))
 									
+									
+									
 									#containers
 									if not row[4].value is None and not row[5].value is None:
 										#if there is container info entered in spreadsheet
@@ -590,10 +591,11 @@ try:
 											AS.pp(boxObject)
 										sys.stdout.flush()
 									
+										
 									
 									#post file object
 									postAO = AS.postArchObj(session, repository, fileObject, loginData)
-									if postAO == 200:
+									if postAO.status_code == 200:
 										try:
 											print ("	Posted " + row[8].value)
 										except:
@@ -601,6 +603,50 @@ try:
 									else:
 										print ("	Failed to post, error code " + str(postAO))
 									sys.stdout.flush()
+									
+									#Digital Object
+									if not row[22].value is None:
+										#if post was successful
+										if postAO.status_code == 200:
+											print ("	-->Uploading dao for " + str(row[22].value))
+											sys.stdout.flush()
+										
+											webDir = "\\\\romeo\\wwwroot\\eresources\\dao"
+											webLink = "http://library.albany.edu/speccoll/findaids/eresources/dao"
+											
+											aoURI = postAO.json()["uri"]
+											ao = AS.getArchObj(session, aoURI, loginData)
+											aoRef = ao["ref_id"]
+											
+											resourceURI = ao["resource"]["ref"]
+											coll = AS.getResource(session, repository, resourceURI.split("/resources/")[1], loginData)
+											resourceID = coll["id_0"]
+											uploadDir = os.path.join(webDir, resourceID)
+											if not os.path.isdir(uploadDir):
+												os.makedirs(uploadDir)
+											uploadFile = os.path.join(daoPath, row[22].value)
+											fileTitle = os.path.basename(row[22].value)
+											extension = os.path.splitext(uploadFile)[1]
+											daoLink = webLink + "/" + resourceID + "/" + aoRef + extension
+											finalFile = os.path.join(uploadDir, aoRef + extension)
+											
+											#move file to web server
+											shutil.move(uploadFile, finalFile)
+											
+											daoObject = AS.makeDAO(fileTitle, daoLink)
+											postDAO = AS.postDAO(session, repository, daoObject, loginData)
+											if postDAO.status_code == 200:
+												daoURI = postDAO.json()["uri"]
+												
+												ao = AS.addDAO(ao, daoURI)
+												postAO = AS.postArchObj(session, repository, ao, loginData)
+												if not postAO.status_code == 200:
+													raise ValueError("Error posting archival object with digital object " + row[22].value)
+																								
+											else:
+												raise ValueError("Error posting digital object " + row[22].value)
+																					
+										
 									
 				wb._archive.close()
 				print ("Moving " + spreadFile + " to complete directory...")
