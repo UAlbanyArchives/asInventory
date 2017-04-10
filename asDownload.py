@@ -149,7 +149,7 @@ class getCmpntDialog(wx.Dialog):
 			#build command list
 			cmd = [asInventory, "-download", outputPath, level, cmpntID, baseURL, repository, user, password]
 			# call master asInventory
-			#print cmd
+			#print (" ".join(cmd))
 			asDownload = Popen(cmd, shell=True, stdout=PIPE, stderr=STDOUT)
 			
 			# busy dialog
@@ -158,11 +158,11 @@ class getCmpntDialog(wx.Dialog):
 			print (msg)
 			#busyDlg = wx.BusyInfo(msg)
 			
-			asDownload.wait()
 			output = ""
 			for line in iter(asDownload.stdout.readline, ""):
 				print (line)
 				output += line
+			asDownload.wait()
 			exitCode = asDownload.returncode
 			#busyDlg = None
 			if exitCode == 0:

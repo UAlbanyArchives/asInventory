@@ -61,11 +61,11 @@ cmd = [asInventory, "-upload", spreadsheetPath, daoPath, baseURL, repository, us
 
 # call master asInventory
 asUpload = Popen(cmd, shell=True, stdout=PIPE, stderr=STDOUT)
-asUpload.wait()
 output = ""
 for line in iter(asUpload.stdout.readline, ""):
 	print (line)
 	output += line
+asUpload.wait()
 	
 exitCode = asUpload.returncode
 if exitCode == 0:

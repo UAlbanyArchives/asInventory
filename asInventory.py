@@ -26,7 +26,9 @@ def updateDate(fileObject, normal, display):
 	return fileObject
 
 try:
-
+	print ("Loaded asInventory...")
+	sys.stdout.flush()
+	
 	if sys.argv[1].lower().endswith("download"):
 		outputPath = sys.argv[2]
 		level = sys.argv[3]
