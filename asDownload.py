@@ -97,36 +97,38 @@ class getCmpntDialog(wx.Dialog):
 	#----------------------------------------------------------------------
 	def getCmpnt(self, event):
 	
-		__location__ = os.path.dirname(os.path.abspath(__file__))
-
-		# get local_settings
-		configPath = os.path.join(__location__, "local_settings.cfg")
-		config = configparser.ConfigParser()
-		config.read(configPath)
-
-		baseURL = config.get('ArchivesSpace', 'baseURL')
-		repository = config.get('ArchivesSpace', 'repository')
-		user = config.get('ArchivesSpace', 'user')
-		password = config.get('ArchivesSpace', 'password')
-		loginData = (baseURL, user, password)
 		
-
-		# required directories, make them if they don't exist
-		inputPath = os.path.join(__location__, "input")
-		if not os.path.isdir(inputPath):
-			os.mkdir(inputPath)
-		outputPath = os.path.join(__location__, "output")
-		if not os.path.isdir(outputPath):
-			os.mkdir(outputPath)
-		completePath = os.path.join(__location__, "complete")
-		if not os.path.isdir(completePath):
-			os.mkdir(completePath)
-		daoPath = os.path.join(__location__, "dao")
-		if not os.path.isdir(daoPath):
-			os.mkdir(daoPath)
-			
 		# Main error handleing
 		try:
+			__location__ = os.path.dirname(os.path.abspath(__file__))
+
+			# get local_settings
+			configPath = os.path.join(__location__, "local_settings.cfg")
+			if not os.path.isFile(configPath):
+				raise ValueError("ERROR: Could not find local_settings.cfg")
+			config = configparser.ConfigParser()
+			config.read(configPath)
+
+			baseURL = config.get('ArchivesSpace', 'baseURL')
+			repository = config.get('ArchivesSpace', 'repository')
+			user = config.get('ArchivesSpace', 'user')
+			password = config.get('ArchivesSpace', 'password')
+			loginData = (baseURL, user, password)
+			
+
+			# required directories, make them if they don't exist
+			inputPath = os.path.join(__location__, "input")
+			if not os.path.isdir(inputPath):
+				os.mkdir(inputPath)
+			outputPath = os.path.join(__location__, "output")
+			if not os.path.isdir(outputPath):
+				os.mkdir(outputPath)
+			completePath = os.path.join(__location__, "complete")
+			if not os.path.isdir(completePath):
+				os.mkdir(completePath)
+			daoPath = os.path.join(__location__, "dao")
+			if not os.path.isdir(daoPath):
+				os.mkdir(daoPath)		
 
 			#get ID value entered in GUI
 			cmpntID = self.m_textCtrl2.GetValue()
