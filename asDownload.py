@@ -104,7 +104,7 @@ class getCmpntDialog(wx.Dialog):
 
 			# get local_settings
 			configPath = os.path.join(__location__, "local_settings.cfg")
-			if not os.path.isFile(configPath):
+			if not os.path.isfile(configPath):
 				raise ValueError("ERROR: Could not find local_settings.cfg")
 			config = configparser.ConfigParser()
 			config.read(configPath)
