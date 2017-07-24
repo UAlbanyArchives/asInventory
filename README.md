@@ -3,7 +3,7 @@ Manage file-level ArchivesSpace inventories with spreadsheets
 
 ### Warning note
 
-This tool has been tested with ArchivesSpace 1.5.x on Windows at UAlbany. The Python source should also run on Mac and Linux with dependencies, but is generally untested.
+This tool has been tested with ArchivesSpace 1.5.x on Windows at UAlbany. The Python source should also run on Mac and Linux with dependencies, but is only minimally tested on Ubuntu 14.04.
 
 This tool makes iterative changes through the API. You should always do significant testing on a development instance of ASpace before using it on production data to make sure it acts as you expect.
 
