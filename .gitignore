@@ -12,7 +12,9 @@ output/
 input/
 complete/
 dao/
+dao-senate/
 beOutput/
+oldVersion/
 daoList.txt
 
 # C extensions
