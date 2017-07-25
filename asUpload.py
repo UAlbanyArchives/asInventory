@@ -4,6 +4,7 @@ import wx
 import datetime
 import shutil
 import traceback
+import json
 
 #non-standard dependencies
 import configparser
@@ -457,11 +458,10 @@ try:
 										if postDAO.status_code == 200:
 											daoURI = postDAO.json()["uri"]
 											
-											ao = AS.addDAO(ao, daoURI)
+											ao = AS.addDAO(ao, daoURI, False)
 											postAO = AS.postArchObj(session, repository, ao, loginData)
 											if not postAO.status_code == 200:
-												raise ValueError("Error posting archival object with digital object " + str(row[22].value) + " HTTP response " + str(postAO.status_code))
-												AS.pp(ao)
+												raise ValueError("Error posting archival object with digital object " + str(row[22].value) + " HTTP response " + str(postAO.status_code) + ". Object: " + json.dumps(ao, indent=2))
 																							
 										else:
 											raise ValueError("Error posting digital object " + row[22].value)
