@@ -16,7 +16,7 @@ This tool makes iterative changes through the API. You should always do signific
 	```
 
 2. Edit the sample config file `local_settings_sample.cfg` with your ArchivesSpace credentials and rename to `local_settings.cfg` 
-	* (`[asInventory]` section is only required for the dao upload workflow, you can add digital objects without editing these if you just enter URLs.)
+	* (`[asInventory]` section is only required for the optional dao upload workflow, you can add digital objects without editing these if you just enter URLs.)
 3. asInventory requires three directories that will be created when you first run it:
 	```
 	input
@@ -54,10 +54,10 @@ This tool makes iterative changes through the API. You should always do signific
 	* If an ID is entered, asInventory will find and update an existing record
 	* If no ID is entered, asInventory will create a new archival object child
 	* If URIs for Locations or containers are entered, asInventory will link these records to the new archival object record, if they are left place, new containers and locations will be created if a label and indicator are listed
-	* Accepts up to 5 Dates and uses Normal dates (i.e. "1977/1988" or "1903-03-17/1917-01/15")
+	* Accepts up to 5 Dates and uses Normal dates (i.e. "1977/1988" or "1903-03-17/1917-01-15")
 	* Display dates are optional and are entered in the ASpace Expression field
 	* Can make Access Restriction (column T), General Note (column U), and Scope (column V) notes.
-	* Can create and link digital object. This can be a link entered in column W, or the filename of a file placed in the `dao` directory. If dao paths are set up correctly in `local_settings.cfg` asInventory will also rename files to their newly created ASpace IDs and move them to a webserver.
+	* Can create and link digital objects. This can be a link entered in column W, or the filename of a file placed in the `dao` directory. If dao paths are set up correctly in `local_settings.cfg` asInventory will also rename files to their newly created ASpace IDs and move them to a webserver.
 	* ![](screenshots/screenshot5.png)
 3. Save the spreadsheet to the `input` directory
 4. run asUpload.exe (may take a minute to open the first time)
@@ -90,7 +90,7 @@ python setup.py install
 For wxPython:
 	
 * For Windows use the [installer](http://www.wxpython.org/download.php), make sure to select the version compatible with your Python
-* For Macs `brew install wxpython` should work
+* For Macs `brew install wxpython` should work, but is untested
 * For Ubuntu, this should work: `sudo apt-get install python-wxgtk2.8 python-wxtools wx2.8-doc wx2.8-examples wx2.8-headers wx2.8-i18n`
 
 ## Additional features
@@ -104,15 +104,15 @@ For wxPython:
 `daoList.exe` will create `daoList.txt` which will list all files placed in the `dao` directory.
 
 The envisioned use case for this is:
-	1. You have a lot of PDFs (or anything else really) of the folders in the file listing you want to upload.
-	2. You place these PDFs in the `dao` directory
-	3. Run `daoList.exe` to get a text listing of the files
-	4. Paste that listing into the upload spreadsheet in the DAO Filename column (W).
-	5. During upload, asInventory will create ASpace digital objects, rename these files to their ASpace UUIDs, and move them to a webserver path listed in `local_settings.cfg`
+1. You have a lot of PDFs (or anything else really) of the folders in the file listing you want to upload.
+2. You place these PDFs in the `dao` directory
+3. Run `daoList.exe` to get a text listing of the files
+4. Paste that listing into the upload spreadsheet in the DAO Filename column (W).
+5. During upload, asInventory will create ASpace digital objects, rename these files to their ASpace UUIDs, and move them to a webserver path listed in `local_settings.cfg`
 
 ## General note on sustainability
 
-This tool in in active use at UAlbany, and thus I'm committed to maintaining this project for at least the near future. It does rely on the custom [archives_tools](https://github.com/UAlbanyArchives/archives_tools) library with makes it relatively small and simple. (asDownload.py is under 400 lines of code, GUI and all). If a community-led ArchivesSpace library for Python is developed, I'll make a strong effort to move asInventory to that library.
+This tool is in active use at UAlbany, and thus I'm committed to maintaining this project for at least the near future. It does rely on the custom [archives_tools](https://github.com/UAlbanyArchives/archives_tools) library with makes it relatively small and simple. (asDownload.py is under 400 lines of code, GUI and all). If a community-led ArchivesSpace library for Python is developed, I'll make a strong effort to move asInventory to that library.
 
 
 ## Contributing
