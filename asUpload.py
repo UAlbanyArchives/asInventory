@@ -460,7 +460,8 @@ try:
 											ao = AS.addDAO(ao, daoURI)
 											postAO = AS.postArchObj(session, repository, ao, loginData)
 											if not postAO.status_code == 200:
-												raise ValueError("Error posting archival object with digital object " + row[22].value)
+												raise ValueError("Error posting archival object with digital object " + str(row[22].value) + " HTTP response " + str(postAO.status_code))
+												AS.pp(ao)
 																							
 										else:
 											raise ValueError("Error posting digital object " + row[22].value)
