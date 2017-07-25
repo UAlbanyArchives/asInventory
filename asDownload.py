@@ -154,7 +154,6 @@ class getCmpntDialog(wx.Dialog):
 				#busyDlg = wx.BusyInfo(msg)
 				#busyDlg = None
 				
-				print ("do stuff")
 				#Connect to ASpace
 				session = AS.getSession(loginData)
 				if session is None:
