@@ -6,6 +6,8 @@ import sys
 __location__ = (os.path.dirname(os.path.realpath(__file__)))
 inputPath = os.path.join(__location__, "input")
 
+daoFileList = []
+
 for file in os.listdir(inputPath):
 	if file.endswith(".xlsx"):
 		filePath = os.path.join(inputPath, file)
@@ -70,11 +72,17 @@ for file in os.listdir(inputPath):
 							if len(str(row[22].value).strip()) > 0:
 								daoName = str(row[22].value).strip()
 								if not daoName.lower().startswith("http"):
-									daoPath = os.path.join(__location__, "dao", daoName)
-									
-									if not os.path.isfile(daoPath):
+									if daoName in daoFileList:
 										errorCount += 1
-										print ("DAO ERROR: File Not Present in dao (" + str(row[22].value) + ") line " + str(lineCount))
+										print ("DAO ERROR: File listed twice (" + str(row[22].value) + ") line " + str(lineCount))
+									else:
+										daoFileList.append(daoName)
+								
+										daoPath = os.path.join(__location__, "dao", daoName)
+										
+										if not os.path.isfile(daoPath):
+											errorCount += 1
+											print ("DAO ERROR: File Not Present in dao (" + str(row[22].value) + ") line " + str(lineCount))
 						
 				
 				print ("	" + str(errorCount) + " errors found in " + file)
