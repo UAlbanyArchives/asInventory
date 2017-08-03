@@ -16,6 +16,8 @@ dao-senate/
 beOutput/
 oldVersion/
 daoList.txt
+dateList.csv
+be/
 
 # C extensions
 *.so

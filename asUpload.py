@@ -155,17 +155,22 @@ try:
 											fileObject = AS.makeDate(fileObject, normal)
 									return fileObject
 								
+								def clearExcelEscape(dateString):
+									if dateString.startswith("=\"") and dateString.endswith("\""):
+										dateString = dateString[2:][:-1]
+									return dateString
+								
 								#enter dates
 								if not row[10].value is None:
-									fileObject = updateDate(fileObject, str(row[10].value), str(row[9].value))
+									fileObject = updateDate(fileObject, clearExcelEscape(str(row[10].value)), str(row[9].value))
 								if not row[12].value is None:
-									fileObject = updateDate(fileObject, str(row[12].value), str(row[11].value))
+									fileObject = updateDate(fileObject, clearExcelEscape(str(row[12].value)), str(row[11].value))
 								if not row[14].value is None:
-									fileObject = updateDate(fileObject, str(row[14].value), str(row[13].value))
+									fileObject = updateDate(fileObject, clearExcelEscape(str(row[14].value)), str(row[13].value))
 								if not row[16].value is None:
-									fileObject = updateDate(fileObject, str(row[16].value), str(row[15].value))
+									fileObject = updateDate(fileObject, clearExcelEscape(str(row[16].value)), str(row[15].value))
 								if not row[18].value is None:
-									fileObject = updateDate(fileObject, str(row[18].value), str(row[17].value))
+									fileObject = updateDate(fileObject, clearExcelEscape(str(row[18].value)), str(row[17].value))
 									
 								#scope note
 								if not row[21].value is None:
