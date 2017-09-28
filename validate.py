@@ -8,6 +8,22 @@ inputPath = os.path.join(__location__, "input")
 
 daoFileList = []
 
+
+def dateCheck(date, errorCount, lineCount, title):
+	if "/" in date:
+		start, end = date.split("/")
+		if start > end:
+			print ("DATE ERROR: (" + date + ") line " + str(lineCount) + " title: " + title)
+			errorCount += 1
+			return errorCount
+	if "undated" in date.lower():
+		print ("DATE ERROR: (" + date + ") line " + str(lineCount) + " title: " + title)
+		errorCount += 1
+		return errorCount
+		
+	
+	return errorCount
+
 for file in os.listdir(inputPath):
 	if file.endswith(".xlsx"):
 		filePath = os.path.join(inputPath, file)
@@ -44,26 +60,31 @@ for file in os.listdir(inputPath):
 					if lineCount > 6:
 						try:
 							date = dacs.iso2DACS(str(row[10].value))
+							errorCount = dateCheck(str(row[10].value), errorCount, lineCount, str(row[8].value))
 						except:
 							errorCount += 1
 							print ("DATE ERROR: (" + str(row[10].value) + ") line " + str(lineCount) + " title: " + str(row[8].value))
 						try:
 							date = dacs.iso2DACS(str(row[12].value))
+							errorCount = dateCheck(str(row[12].value), errorCount, lineCount, str(row[8].value))
 						except:
 							errorCount += 1
 							print ("DATE ERROR: (" + str(row[12].value) + ") line " + str(lineCount) + " title: " + str(row[8].value))
 						try:
 							date = dacs.iso2DACS(str(row[14].value))
+							errorCount = dateCheck(str(row[14].value), errorCount, lineCount, str(row[8].value))
 						except:
 							errorCount += 1
 							print ("DATE ERROR: (" + str(row[14].value) + ") line " + str(lineCount) + " title: " + str(row[8].value))
 						try:
 							date = dacs.iso2DACS(str(row[16].value))
+							errorCount = dateCheck(str(row[16].value), errorCount, lineCount, str(row[8].value))
 						except:
 							errorCount += 1
 							print ("DATE ERROR: (" + str(row[16].value) + ") line " + str(lineCount) + " title: " + str(row[8].value))
 						try:
 							date = dacs.iso2DACS(str(row[18].value))
+							errorCount = dateCheck(str(row[18].value), errorCount, lineCount, str(row[8].value))
 						except:
 							errorCount += 1
 							print ("DATE ERROR: (" + str(row[18].value) + ") line " + str(lineCount) + " title: " + str(row[8].value))

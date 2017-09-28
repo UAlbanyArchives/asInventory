@@ -5,6 +5,7 @@ import datetime
 import shutil
 import traceback
 import json
+import sys
 
 #non-standard dependencies
 import configparser
@@ -144,9 +145,9 @@ try:
 									if "/" in normal:
 										#date range
 										if len(display) > 0:
-											fileObject = AS.makeDate(fileObject, normal.split("/")[0], normal.split("/")[1], display)
+											fileObject = AS.makeDate(fileObject, normal.split("/")[0].strip(), normal.split("/")[1].strip(), display)
 										else:
-											fileObject = AS.makeDate(fileObject, normal.split("/")[0], normal.split("/")[1])
+											fileObject = AS.makeDate(fileObject, normal.split("/")[0].strip(), normal.split("/")[1].strip())
 									else:
 										#single date
 										if len(display) > 0:
@@ -162,15 +163,15 @@ try:
 								
 								#enter dates
 								if not row[10].value is None:
-									fileObject = updateDate(fileObject, clearExcelEscape(str(row[10].value)), str(row[9].value))
+									fileObject = updateDate(fileObject, clearExcelEscape(str(row[10].value).strip()), str(row[9].value).strip())
 								if not row[12].value is None:
-									fileObject = updateDate(fileObject, clearExcelEscape(str(row[12].value)), str(row[11].value))
+									fileObject = updateDate(fileObject, clearExcelEscape(str(row[12].value).strip()), str(row[11].value).strip())
 								if not row[14].value is None:
-									fileObject = updateDate(fileObject, clearExcelEscape(str(row[14].value)), str(row[13].value))
+									fileObject = updateDate(fileObject, clearExcelEscape(str(row[14].value).strip()), str(row[13].value).strip())
 								if not row[16].value is None:
-									fileObject = updateDate(fileObject, clearExcelEscape(str(row[16].value)), str(row[15].value))
+									fileObject = updateDate(fileObject, clearExcelEscape(str(row[16].value).strip()), str(row[15].value).strip())
 								if not row[18].value is None:
-									fileObject = updateDate(fileObject, clearExcelEscape(str(row[18].value)), str(row[17].value))
+									fileObject = updateDate(fileObject, clearExcelEscape(str(row[18].value).strip()), str(row[17].value).strip())
 									
 								#scope note
 								if not row[21].value is None:
@@ -412,7 +413,7 @@ try:
 									except:
 										print ("	Posted non-ascii text")
 								else:
-									print ("	Failed to post, error code " + str(postAO))
+									raise ValueError("	Failed to post, error code " + str(postAO))
 								
 								#Digital Object
 								if not row[22].value is None:
