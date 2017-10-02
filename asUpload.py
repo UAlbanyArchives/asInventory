@@ -132,7 +132,7 @@ try:
 									fileObject = AS.getArchObjID(session, repository, str(row[0].value).strip(), loginData)
 									
 								#set title and position
-								fileObject.title = row[8].value
+								fileObject.title = row[8].value.strip()
 								#print (str(row[8].value) + " --> position " + str(fileCount) )
 								fileObject.position = int(fileCount)
 								#print (fileObject.position)
