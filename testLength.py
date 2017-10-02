@@ -1,6 +1,7 @@
 import os
 import configparser
 import openpyxl
+import sys
 from archives_tools import aspace as AS
 
 __location__ = os.path.dirname(os.path.abspath(__file__))
@@ -76,20 +77,36 @@ for spreadFile in os.listdir(inputPath):
 					object = AS.getArchObjID(session, repository, refID, loginData)
 					childTree = AS.getChildren(session, object, loginData)
 					childrenList = childTree.children
-					
-				recordCount = 0
-				for child in childrenList:
-					recordCount += 1
+				
+				titleList = []	
 					
 				sheetCount = 0
 				rowCount = 0
 				for row in sheet.rows:
-					rowCount = rowCount + 1
-					if rowCount > 6:
-						sheetCount = rowCount - 6
+					rowCount += 1
+					if rowCount > 7:
+						if len(row[8].value) > 0:
+							sheetCount += 1
+							
+							sheetTitle = row[8].value.split(",")[0]
+							titleList.append(sheetTitle.strip())
+						
+				recordCount = 0
+				for child in childrenList:
+					recordCount += 1
+					aspaceTitle = child.title.split(",")[0].strip()
+					#print (aspaceTitle)
+					if aspaceTitle in titleList:
+						titleList.remove(aspaceTitle)				
 						
 				print ("	RecordCount = " + str(recordCount))
 				print ("	SpreadsheetCount = " + str(sheetCount))
-						
-						
-				
+				print (str(len(titleList)) + " files missing")
+				print ("\n	" + "\n	".join(titleList))
+
+# make sure console doesn't close
+print ("Press Enter to continue...")
+if sys.version_info >= (3, 0):
+	input()
+else:
+	raw_input()			
