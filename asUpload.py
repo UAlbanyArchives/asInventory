@@ -107,6 +107,10 @@ try:
 						resourceURI = object.resource.ref
 						parentURI = object.uri
 						
+					#get count of existing items
+					childCount = 0
+					for objectChild in AS.getChildren(session, object).children:
+						childCount += 1
 						
 					boxSession = {}
 					rowCount = 0
@@ -114,6 +118,7 @@ try:
 						rowCount = rowCount + 1
 						if rowCount > 6:
 							fileCount = rowCount - 6
+							itemCount = fileCount + childCount
 							
 							#make sure there is a title
 							if not row[8].value is None:
@@ -133,8 +138,8 @@ try:
 									
 								#set title and position
 								fileObject.title = row[8].value.strip()
-								#print (str(row[8].value) + " --> position " + str(fileCount) )
-								fileObject.position = int(fileCount)
+								#print (str(row[8].value) + " --> position " + str(itemCount) )
+								fileObject.position = int(itemCount)
 								#print (fileObject.position)
 								#clear dates
 								fileObject.dates = []
@@ -163,15 +168,20 @@ try:
 								
 								#enter dates
 								if not row[10].value is None:
-									fileObject = updateDate(fileObject, clearExcelEscape(str(row[10].value).strip()), str(row[9].value).strip())
+									if len(str(row[10].value).strip()) > 0:
+										fileObject = updateDate(fileObject, clearExcelEscape(str(row[10].value).strip()), str(row[9].value).strip())
 								if not row[12].value is None:
-									fileObject = updateDate(fileObject, clearExcelEscape(str(row[12].value).strip()), str(row[11].value).strip())
+									if len(str(row[12].value).strip()) > 0:
+										fileObject = updateDate(fileObject, clearExcelEscape(str(row[12].value).strip()), str(row[11].value).strip())
 								if not row[14].value is None:
-									fileObject = updateDate(fileObject, clearExcelEscape(str(row[14].value).strip()), str(row[13].value).strip())
+									if len(str(row[14].value).strip()) > 0:
+										fileObject = updateDate(fileObject, clearExcelEscape(str(row[14].value).strip()), str(row[13].value).strip())
 								if not row[16].value is None:
-									fileObject = updateDate(fileObject, clearExcelEscape(str(row[16].value).strip()), str(row[15].value).strip())
+									if len(str(row[16].value).strip()) > 0:
+										fileObject = updateDate(fileObject, clearExcelEscape(str(row[16].value).strip()), str(row[15].value).strip())
 								if not row[18].value is None:
-									fileObject = updateDate(fileObject, clearExcelEscape(str(row[18].value).strip()), str(row[17].value).strip())
+									if len(str(row[18].value).strip()) > 0:
+										fileObject = updateDate(fileObject, clearExcelEscape(str(row[18].value).strip()), str(row[17].value).strip())
 									
 								#scope note
 								if not row[21].value is None:
@@ -322,15 +332,15 @@ try:
 												newInstances.append(instance)
 										fileObject.instances = newInstances
 										#makes and posts a new container
-										boxObject = AS.makeContainer(session, repository, str(row[4].value), str(row[5].value), loginData)
+										boxObject = AS.makeContainer(session, repository, str(row[4].value).strip(), str(row[5].value).strip(), loginData)
 										#update dict of new boxes for this sheet
-										boxSession[str(row[4].value) + " " + str(row[5].value)] = boxObject.uri
+										boxSession[str(row[4].value).strip() + " " + str(row[5].value).strip()] = boxObject.uri
 										if not row[6].value is None:
-											childContainer = str(row[6].value)
+											childContainer = str(row[6].value).strip()
 										else:
 											childContainer = None
 										if not row[7].value is None:
-											childIndicator = str(row[7].value)
+											childIndicator = str(row[7].value).strip()
 										else:
 											childIndicator = None
 										fileObject = AS.addToContainer(session, fileObject, boxObject.uri, childContainer,  childIndicator, loginData)

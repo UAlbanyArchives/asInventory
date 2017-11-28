@@ -18,6 +18,8 @@ oldVersion/
 daoList.txt
 dateList.csv
 be/
+deleteDAOs.py
+fixes/
 
 # C extensions
 *.so

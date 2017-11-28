@@ -63,7 +63,10 @@ for file in os.listdir(inputPath):
 							errorCount = dateCheck(str(row[10].value), errorCount, lineCount, str(row[8].value))
 						except:
 							errorCount += 1
-							print ("DATE ERROR: (" + str(row[10].value) + ") line " + str(lineCount) + " title: " + str(row[8].value))
+							try:
+								print ("DATE ERROR: (" + str(row[10].value) + ") line " + str(lineCount) + " title: " + str(row[8].value))
+							except:
+								print (lineCount)
 						try:
 							date = dacs.iso2DACS(str(row[12].value))
 							errorCount = dateCheck(str(row[12].value), errorCount, lineCount, str(row[8].value))
