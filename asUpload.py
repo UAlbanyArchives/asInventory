@@ -192,7 +192,7 @@ try:
 										else:
 											newNotes.append(note)
 									fileObject.notes = newNotes
-									fileObject = AS.makeMultiNote(fileObject, "scopecontent", str(row[21].value))
+									fileObject = AS.makeMultiNote(fileObject, "scopecontent", row[21].value)
 								#general note
 								if not row[20].value is None:
 									newNotes = []
@@ -202,7 +202,7 @@ try:
 										else:
 											newNotes.append(note)
 									fileObject.notes = newNotes
-									fileObject = AS.makeMultiNote(fileObject, "odd", str(row[20].value))
+									fileObject = AS.makeMultiNote(fileObject, "odd", row[20].value)
 								#access restrict note
 								if not row[19].value is None:
 									newNotes = []
@@ -213,7 +213,7 @@ try:
 											newNotes.append(note)
 									fileObject.notes = newNotes
 									fileObject.restrictions_apply = True
-									fileObject = AS.makeMultiNote(fileObject, "accessrestrict", str(row[19].value))
+									fileObject = AS.makeMultiNote(fileObject, "accessrestrict", row[19].value)
 								
 								
 								
