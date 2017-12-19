@@ -109,7 +109,7 @@ try:
 						
 					#get count of existing items
 					childCount = 0
-					for objectChild in AS.getChildren(session, object).children:
+					for objectChild in AS.getChildren(session, object, loginData).children:
 						childCount += 1
 						
 					boxSession = {}
