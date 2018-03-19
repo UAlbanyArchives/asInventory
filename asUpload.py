@@ -60,6 +60,9 @@ try:
 			print ("Reading " + spreadFile)
 			wb = openpyxl.load_workbook(filename=spreadsheet, read_only=True)
 			
+			#this insures Boxes with the same numbers in the entire worksheet will make only one ArchviesSpace container
+			boxSession = {}
+			
 			#validate sheets
 			for sheet in wb.worksheets:
 				checkSwitch = True
@@ -112,7 +115,6 @@ try:
 					for objectChild in AS.getChildren(session, object, loginData).children:
 						childCount += 1
 						
-					boxSession = {}
 					rowCount = 0
 					for row in sheet.rows:
 						rowCount = rowCount + 1
