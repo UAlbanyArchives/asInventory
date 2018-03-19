@@ -10,6 +10,12 @@ daoFileList = []
 
 
 def dateCheck(date, errorCount, lineCount, title):
+	if " " in date.strip():
+		try:
+			print ("Line " + str(lineCount) + ", DATE ERROR, invalid space: (" + str(date) + ")  title: " + title)
+		except:
+			print ("Line " + str(lineCount) + ", DATE ERROR, invalid space: (" + str(date) + ")")
+		errorCount += 1
 	if "/" in date:
 		start, end = date.split("/")
 		if start > end:
