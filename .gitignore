@@ -20,6 +20,7 @@ dateList.csv
 be/
 deleteDAOs.py
 fixes/
+temp/
 
 # C extensions
 *.so

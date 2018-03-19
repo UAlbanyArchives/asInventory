@@ -13,15 +13,17 @@ def dateCheck(date, errorCount, lineCount, title):
 	if "/" in date:
 		start, end = date.split("/")
 		if start > end:
-			print ("DATE ERROR: (" + date + ") line " + str(lineCount) + " title: " + title)
+			try:
+				print ("Line " + str(lineCount) + ", DATE ERROR: (" + str(date) + ")  title: " + title)
+			except:
+				print ("Line " + str(lineCount) + ", DATE ERROR: (" + str(date) + ")")
 			errorCount += 1
-			return errorCount
 	if "undated" in date.lower():
-		print ("DATE ERROR: (" + date + ") line " + str(lineCount) + " title: " + title)
+		try:
+			print ("Line " + str(lineCount) + ", DATE ERROR: (" + str(date) + ")  title: " + title)
+		except:
+			print ("Line " + str(lineCount) + ", DATE ERROR: (" + str(date) + ")")
 		errorCount += 1
-		return errorCount
-		
-	
 	return errorCount
 
 for file in os.listdir(inputPath):
@@ -60,37 +62,49 @@ for file in os.listdir(inputPath):
 					if lineCount > 6:
 						try:
 							date = dacs.iso2DACS(str(row[10].value))
-							errorCount = dateCheck(str(row[10].value), errorCount, lineCount, str(row[8].value))
+							errorCount = dateCheck(str(row[10].value), errorCount, lineCount, row[8].value)
 						except:
 							errorCount += 1
 							try:
-								print ("DATE ERROR: (" + str(row[10].value) + ") line " + str(lineCount) + " title: " + str(row[8].value))
+								print ("Line " + str(lineCount) + ", DATE ERROR: (" + str(row[10].value) + ")  title: " + str(row[8].value))
 							except:
-								print (lineCount)
+								print ("Line " + str(lineCount) + ", DATE ERROR: (" + str(row[10].value) + ")")
 						try:
 							date = dacs.iso2DACS(str(row[12].value))
-							errorCount = dateCheck(str(row[12].value), errorCount, lineCount, str(row[8].value))
+							errorCount = dateCheck(str(row[12].value), errorCount, lineCount, row[8].value)
 						except:
 							errorCount += 1
-							print ("DATE ERROR: (" + str(row[12].value) + ") line " + str(lineCount) + " title: " + str(row[8].value))
+							try:
+								print ("Line " + str(lineCount) + ", DATE ERROR: (" + str(row[12].value) + ")  title: " + str(row[8].value))
+							except:
+								print ("Line " + str(lineCount) + ", DATE ERROR: (" + str(row[12].value) + ")")
 						try:
 							date = dacs.iso2DACS(str(row[14].value))
-							errorCount = dateCheck(str(row[14].value), errorCount, lineCount, str(row[8].value))
+							errorCount = dateCheck(str(row[14].value), errorCount, lineCount, row[8].value)
 						except:
 							errorCount += 1
-							print ("DATE ERROR: (" + str(row[14].value) + ") line " + str(lineCount) + " title: " + str(row[8].value))
+							try:
+								print ("Line " + str(lineCount) + ", DATE ERROR: (" + str(row[14].value) + ")  title: " + str(row[8].value))
+							except:
+								print ("Line " + str(lineCount) + ", DATE ERROR: (" + str(row[14].value) + ")")
 						try:
 							date = dacs.iso2DACS(str(row[16].value))
-							errorCount = dateCheck(str(row[16].value), errorCount, lineCount, str(row[8].value))
+							errorCount = dateCheck(str(row[16].value), errorCount, lineCount, row[8].value)
 						except:
 							errorCount += 1
-							print ("DATE ERROR: (" + str(row[16].value) + ") line " + str(lineCount) + " title: " + str(row[8].value))
+							try:
+								print ("Line " + str(lineCount) + ", DATE ERROR: (" + str(row[16].value) + ")  title: " + str(row[8].value))
+							except:
+								print ("Line " + str(lineCount) + ", DATE ERROR: (" + str(row[16].value) + ")")
 						try:
 							date = dacs.iso2DACS(str(row[18].value))
-							errorCount = dateCheck(str(row[18].value), errorCount, lineCount, str(row[8].value))
+							errorCount = dateCheck(str(row[18].value), errorCount, lineCount, row[8].value)
 						except:
 							errorCount += 1
-							print ("DATE ERROR: (" + str(row[18].value) + ") line " + str(lineCount) + " title: " + str(row[8].value))
+							try:
+								print ("Line " + str(lineCount) + ", DATE ERROR: (" + str(row[18].value) + ")  title: " + str(row[8].value))
+							except:
+								print ("Line " + str(lineCount) + ", DATE ERROR: (" + str(row[18].value) + ")")
 							
 						if not row[22].value is None:
 							if len(str(row[22].value).strip()) > 0:
