@@ -2,6 +2,7 @@ import os
 from archives_tools import dacs
 import openpyxl
 import sys
+import string
 
 __location__ = (os.path.dirname(os.path.realpath(__file__)))
 inputPath = os.path.join(__location__, "input")
@@ -16,6 +17,16 @@ def dateCheck(date, errorCount, lineCount, title):
 		except:
 			print ("Line " + str(lineCount) + ", DATE ERROR, invalid space: (" + str(date) + ")")
 		errorCount += 1
+	acceptList = ["/", "-", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
+	if date != "None":
+		for character in str(date).strip():
+			if not character in acceptList:
+				print (character)
+				try:
+					print ("Line " + str(lineCount) + ", DATE ERROR, invalid character: (" + str(date) + ")  title: " + title)
+				except:
+					print ("Line " + str(lineCount) + ", DATE ERROR, invalid character: (" + str(date) + ")")
+				errorCount += 1
 	if "/" in date:
 		start, end = date.split("/")
 		if start > end:
