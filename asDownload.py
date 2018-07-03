@@ -371,7 +371,7 @@ class getCmpntDialog(wx.Dialog):
 		except:
 			exceptMsg = traceback.format_exc()
 			outputText = "asDownload error: " + exceptMsg
-			errorOutput = "\n" + "#############################################################\n" + str(datetime.datetime.now()) + "\n#############################################################\n" + outputText + "\n********************************************************************************"
+			errorOutput = "\n" + "#############################################################\n" + str(datetime.datetime.now()) + "\n#############################################################\n" + outputText + "\n*****************************************************************************************************************************************"
 			file = open(os.path.join(__location__, "error.log"), "a")
 			file.write(errorOutput)
 			file.close()

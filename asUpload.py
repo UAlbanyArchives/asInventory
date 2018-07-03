@@ -271,7 +271,7 @@ try:
 											for locationURI in str(row[1].value).split(";"):
 												locTest = False
 												for location in boxObject.container_locations:
-													if location.ref == locationURI.strip():
+													if location["ref"] == locationURI.strip():
 														locTest = True
 												if locTest == False:
 													boxObject = AS.addToLocation(boxObject, locationURI)
@@ -356,7 +356,7 @@ try:
 											for locationURI in str(row[1].value).split(";"):
 												locTest = False
 												for location in boxObject.container_locations:
-													if location.ref == locationURI.strip():
+													if location["ref"] == locationURI.strip():
 														locTest = True
 												if locTest == False:
 													boxObject = AS.addToLocation(boxObject, locationURI)
