@@ -105,10 +105,10 @@ try:
 						print ("Found " + object.title)
 					else:
 						resourceLevel = False
-                        try:
-                            print ("Looking for archival object matching " + str(displayName) + "...")
-                        except:
-                            print ("Looking for archival object matching [non-ascii component name]...")
+						try:
+							 print ("Looking for archival object matching " + str(displayName) + "...")
+						except:
+							print ("Looking for archival object matching [non-ascii component name]...")
 						object = AS.getArchObjID(session, repository, refID, loginData)
 						print ("Found " + str(object.title))
 						resourceURI = object.resource.ref
