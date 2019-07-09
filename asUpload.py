@@ -241,8 +241,8 @@ try:
                                                 if instance.sub_container.top_container.ref == boxUri:
                                                     foundBox = True
                                                     newInstances.append(instance)
-                                                elif "digital_object" in instance.keys():
-                                                    newInstances.append(instance)
+                                            elif "digital_object" in instance.keys():
+                                                newInstances.append(instance)
                                         fileObject.instances = newInstances
                                         if foundBox == False:
                                             #link to existing box
