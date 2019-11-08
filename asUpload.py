@@ -110,7 +110,10 @@ try:
                         except:
                             print ("Looking for archival object matching [non-ascii component name]...")
                         object = AS.getArchObjID(session, repository, refID, loginData)
-                        print ("Found " + str(object.title))
+                        try:
+                            print ("Found " + str(object.title))
+                        except:
+                            print ("Found archival object matching [non-ascii component name].")
                         resourceURI = object.resource.ref
                         parentURI = object.uri
                         
