@@ -432,6 +432,7 @@ try:
                                     except:
                                         print ("    Posted non-ascii text")
                                 else:
+                                    print (postAO.text)
                                     raise ValueError("    Failed to post, error code " + str(postAO))
                                 
                                 #Digital Object
@@ -460,6 +461,8 @@ try:
                                                 #for simple http links
                                                 finalFile = str(row[22].value).strip()
                                                 fileTitle = os.path.basename(row[22].value)
+                                                if len(fileTitle) < 1:
+                                                    fileTitle = str(row[8].value).strip()
                                                 daoLink = finalFile                        
                                             
                                             daoObject = AS.makeDAO(fileTitle, daoLink)
