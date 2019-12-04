@@ -134,11 +134,11 @@ for file in os.listdir(inputPath):
 										daoFileList.append(daoName)
 								
 										daoPath = os.path.join(__location__, "dao", daoName)
-										
+										"""
 										if not os.path.isfile(daoPath):
 											errorCount += 1
 											print ("DAO ERROR: File Not Present in dao (" + str(row[22].value) + ") line " + str(lineCount))
-						
+										"""
 				
 				print ("	" + str(errorCount) + " errors found in " + file)
 				
