@@ -1,6 +1,5 @@
 import os
 from subprocess import Popen, PIPE, STDOUT
-import wx
 import datetime
 import shutil
 import traceback
@@ -16,9 +15,6 @@ from archives_tools.dacs import iso2DACS
 
 # Main error handleing
 try:
-
-    app = wx.App(False)
-    app.MainLoop()
 
     __location__ = os.path.dirname(os.path.abspath(__file__))
 
@@ -487,7 +483,7 @@ try:
                 shutil.copy2(os.path.join(inputPath, spreadFile), os.path.join(completeDir, os.path.splitext(spreadFile)[0] + str(datetime.datetime.now()).split(".")[0].replace(":", "_") + ".xlsx"))        
             else:
                 shutil.copy2(os.path.join(inputPath, spreadFile), completeDir)
-            os.remove(os.path.join(inputPath, spreadFile))
+            #os.remove(os.path.join(inputPath, spreadFile))
         else:
             print ("ERROR: incorrect file " + spreadFile + " in input path.")
     
@@ -498,13 +494,9 @@ try:
         else:
             resultMsg = "Successfully uploaded " + str(spreadsheetCount) + " spreadsheets to ArchivesSpace."
         print (resultMsg)
-        successNotice = wx.MessageDialog(None, resultMsg, 'Upload Success', wx.OK | wx.ICON_INFORMATION )
-        successNotice.ShowModal()
     else:
         resultMsg = "No valid spreadsheets found in input directory."
         print (resultMsg)
-        successNotice = wx.MessageDialog(None, resultMsg, 'No Spreadsheets', wx.OK | wx.ICON_EXCLAMATION )
-        successNotice.ShowModal()
 
 
 except:
@@ -514,5 +506,10 @@ except:
     file = open(os.path.join(__location__, "error.log"), "a")
     file.write(errorOutput)
     file.close()
-    errorNotice = wx.MessageDialog(None, "Error uploading to ArchivesSpace. Please check error.log for more details. " + exceptMsg, 'Upload Error', wx.OK | wx.ICON_ERROR )
-    errorNotice.ShowModal()
+	
+# make sure console doesn't close
+print ("Press Enter to continue...")
+if sys.version_info >= (3, 0):
+	input()
+else:
+	raw_input()
