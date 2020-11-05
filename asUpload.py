@@ -1,5 +1,6 @@
 import os
 from subprocess import Popen, PIPE, STDOUT
+import requests
 import datetime
 import shutil
 import traceback
@@ -421,7 +422,16 @@ try:
                                 
                                 #post file object
                                 fileObject.publish = True
-                                postAO = AS.postArchObj(session, repository, fileObject, loginData)
+                                #postAO = AS.postArchObj(session, repository, fileObject, loginData)
+                                aoString = json.dumps(fileObject)
+                                aoObj = json.loads(aoString)                                
+                                if "ref_id" in fileObject:
+                                    aoID = fileObject.uri.split("/archival_objects/")[1]
+                                    postAO = requests.post(loginData[0] + "/repositories/" + str(repository) + "/archival_objects/" + aoID, json=aoObj, headers=session)
+                                else:
+                                    postAO = requests.post(loginData[0] + "/repositories/" + str(repository) + "/archival_objects", json=aoObj, headers=session)
+                                AS.checkError(postAO)
+                                
                                 if postAO.status_code == 200:
                                     try:
                                         print ("    Posted " + row[8].value)
@@ -462,6 +472,8 @@ try:
                                                 daoLink = finalFile                        
                                             
                                             daoObject = AS.makeDAO(fileTitle, daoLink)
+                                            #untested change here
+                                            daoObject["publish"] = True
                                             postDAO = AS.postDAO(session, repository, daoObject, loginData)
                                             if postDAO.status_code == 200:
                                                 daoURI = postDAO.json()["uri"]
