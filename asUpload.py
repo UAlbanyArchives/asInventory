@@ -253,16 +253,16 @@ try:
                                             if "sub_container" in instance.keys():
                                                 if instance["sub_container"]["top_container"]["ref"] == boxUri:
                                                     if not row[4].value is None:
-                                                        instance["container"]["type_1"] = str(row[4].value).strip()
+                                                        instance["sub_container"]["type_1"] = str(row[4].value).strip()
                                                         boxObject.type = str(row[4].value).strip()
                                                     if not row[5].value is None:
-                                                        instance["container"]["indicator_1"] = str(row[5].value).strip()
+                                                        instance["sub_container"]["indicator_1"] = str(row[5].value).strip()
                                                         boxObject.indicator = str(row[5].value).strip()
                                                     if not row[6].value is None:
-                                                        instance["container"]["type_2"] = str(row[6].value).strip()
+                                                        instance["sub_container"]["type_2"] = str(row[6].value).strip()
                                                         instance["sub_container"]["type_2"] = str(row[6].value).strip()
                                                     if not row[7].value is None:
-                                                        instance["container"]["indicator_2"] = str(row[7].value).strip()
+                                                        instance["sub_container"]["indicator_2"] = str(row[7].value).strip()
                                                         instance["sub_container"]["indicator_2"] = str(row[7].value).strip()
                                         #add any restrictions to box
                                         if not row[19].value is None:
