@@ -224,6 +224,7 @@ try:
                                 
                                 
                                 #containers
+                                #print (boxSession)
                                 if not row[4].value is None and not row[5].value is None:
                                     #if there is container info entered in spreadsheet
                                     if not row[3].value is None or str(row[4].value) + " " + str(row[5].value) in boxSession.keys():
@@ -232,6 +233,7 @@ try:
                                             boxUri = boxSession[str(row[4].value) + " " + str(row[5].value)]
                                         else:
                                             boxUri = str(row[3].value).strip()
+                                            boxSession[str(row[4].value) + " " + str(row[5].value)] = boxUri
                                         boxObject = AS.getContainer(session, boxUri, loginData)
                                         #look for existing box link
                                         foundBox = False
