@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import datetime
 import traceback
@@ -10,6 +11,8 @@ import openpyxl
 from archives_tools import aspace as AS
 from archives_tools import uaLocations
 
+def safe_filename(s):
+    return re.sub(r'[<>:"/\\|?*\x00-\x1F]', '_', s).strip().rstrip('.')
 
 def getInput(object, displayTitle, resourceLevel, session):
 	
@@ -100,7 +103,7 @@ try:
 	#create Workbook object
 	wb = openpyxl.Workbook()
 		
-	simpleTitle = object.title.replace("/", "-")
+	simpleTitle = safe_filename(object.title.replace("/", "-"))
 	print ("Reading " + simpleTitle)
 	
 	

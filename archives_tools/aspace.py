@@ -867,12 +867,12 @@ def makeDAO(daoTitle, fileURL, hash = None, hashMethod = None):
 	daoUUID = str(uuid.uuid4())
 	daoObject = {"jsonmodel_type": "digital_object", "external_ids": [], "subjects": [], "linked_events": [], "extents": [], "dates": [], "external_documents": [], "rights_statements": [], "linked_agents": [], "file_versions": [], "restrictions": False, "notes": [], "linked_instances": [], "title": daoTitle, "language": "", "digital_object_id": daoUUID}
 	if hash is None:
-		fileVersion = { "jsonmodel_type":"file_version", "is_representative": True, "file_uri": fileURL, "use_statement": "", "xlink_actuate_attribute":"none", "xlink_show_attribute":"embed"}
+		fileVersion = { "jsonmodel_type":"file_version", "publish": True, "is_representative": True, "file_uri": fileURL, "use_statement": "", "xlink_actuate_attribute":"none", "xlink_show_attribute":"embed"}
 	else:
 		if hashMethod is None:
-			fileVersion = { "jsonmodel_type":"file_version", "is_representative": True, "file_uri": fileURL, "use_statement": "", "checksum": hash, "xlink_actuate_attribute":"none", "xlink_show_attribute":"embed"}
+			fileVersion = { "jsonmodel_type":"file_version", "publish": True, "is_representative": True, "file_uri": fileURL, "use_statement": "", "checksum": hash, "xlink_actuate_attribute":"none", "xlink_show_attribute":"embed"}
 		else:
-			fileVersion = { "jsonmodel_type":"file_version", "is_representative": True, "file_uri": fileURL, "use_statement": "", "checksum": hash, "checksum_method": hashMethod, "xlink_actuate_attribute":"none", "xlink_show_attribute":"embed"}
+			fileVersion = { "jsonmodel_type":"file_version", "publish": True, "is_representative": True, "file_uri": fileURL, "use_statement": "", "checksum": hash, "checksum_method": hashMethod, "xlink_actuate_attribute":"none", "xlink_show_attribute":"embed"}
 	daoObject["file_versions"].append(fileVersion)
 	
 	daoObject = makeObject(daoObject)
