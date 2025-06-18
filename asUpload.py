@@ -17,7 +17,12 @@ from archives_tools.dacs import iso2DACS
 # Main error handleing
 try:
 
-    __location__ = os.path.dirname(os.path.abspath(__file__))
+    if getattr(sys, 'frozen', False):
+        # Running as a PyInstaller bundle
+        __location__ = os.path.dirname(sys.executable)
+    else:
+        # Running as a normal Python script
+        __location__ = os.path.dirname(os.path.abspath(__file__))
 
     # get local_settings
     configPath = os.path.join(__location__, "local_settings.cfg")
