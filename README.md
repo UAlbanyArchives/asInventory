@@ -27,6 +27,8 @@ This tool makes iterative changes through the API. You should always do signific
 
 #### To export an inventory
 
+### (This is outdated as the GUI was removed)
+
 1. run asDownload.exe (may take a minute to open the first time)
 	![](screenshots/screenshot1.png)
 2. Select the level to export
@@ -114,6 +116,14 @@ The envisioned use case for this is:
 
 This tool is in active use at UAlbany, and thus I'm committed to maintaining this project for at least the near future. It does rely on the custom [archives_tools](https://github.com/UAlbanyArchives/archives_tools) library with makes it relatively small and simple. (asDownload.py is under 400 lines of code, GUI and all). If a community-led ArchivesSpace library for Python is developed, I'll make a strong effort to move asInventory to that library.
 
+## Building
+
+The `.exe`s are built with pyinstaller
+
+```
+pyinstaller --onefile .\asUpload.py
+pyinstaller --onefile .\asDownload.py
+```
 
 ## Contributing
 
