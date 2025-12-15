@@ -1,3 +1,3 @@
-openpyxl==2.6.4
+openpyxl>=3.0.0
 archivessnake
 pyyaml

@@ -354,3 +354,10 @@ except:
 	# make sure console doesn't close
 	print ("Press anykey to continue...")
 	input()
+
+def main():
+	"""Entry point for console script"""
+	pass  # The code above already executes at module level
+
+if __name__ == "__main__":
+	pass  # Code executes at module level

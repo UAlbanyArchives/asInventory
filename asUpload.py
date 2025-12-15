@@ -1,6 +1,5 @@
 import os
 from subprocess import Popen, PIPE, STDOUT
-import requests
 import datetime
 import shutil
 import traceback
@@ -8,11 +7,12 @@ import json
 import sys
 
 #non-standard dependencies
-import configparser
 import openpyxl
-from archives_tools import aspace as AS
-from archives_tools import uaLocations
-from archives_tools.dacs import iso2DACS
+import yaml
+from asnake.client import ASnakeClient
+import aspace_templates
+import aspace_helpers as helpers
+import ua_locations
 
 # Main error handleing
 try:
@@ -24,18 +24,17 @@ try:
         # Running as a normal Python script
         __location__ = os.path.dirname(os.path.abspath(__file__))
 
-    # get local_settings
-    configPath = os.path.join(__location__, "local_settings.cfg")
-    if not os.path.isfile(configPath):
-        raise ValueError("ERROR: Could not find local_settings.cfg")
-    config = configparser.ConfigParser()
-    config.read(configPath)
-
-    baseURL = config.get('ArchivesSpace', 'baseURL')
-    repository = config.get('ArchivesSpace', 'repository')
-    user = config.get('ArchivesSpace', 'user')
-    password = config.get('ArchivesSpace', 'password')
-    loginData = (baseURL, user, password)
+    # Get repository ID from config file or default to 2
+    try:
+        config_file = os.path.join(os.path.expanduser('~'), 'asinventory.yml')
+        if os.path.isfile(config_file):
+            with open(config_file, 'r') as f:
+                config = yaml.safe_load(f)
+                repository = str(config.get('repository', '2'))
+        else:
+            repository = '2'
+    except:
+        repository = '2'
 
     # required directories, make them if they don't exist
     inputPath = os.path.join(__location__, "input")
@@ -94,35 +93,43 @@ try:
                     level = sheet["I2"].value
                     refID = sheet["I3"].value
                     
-                    #login to ArchivesSpace
-                    session = AS.getSession(loginData)
-                    if session is None:
-                        raise ValueError("ERROR: ArchivesSpace login failed. Please check settings in local_settings.cfg")
+                    #Connect to ArchivesSpace
+                    try:
+                        client = ASnakeClient()
+                        client.authorize()
+                    except:
+                        raise ValueError("ERROR: ArchivesSpace login failed. Please check archivessnake configuration")
                     
                     if level.lower().strip() == "resource":
                         resourceLevel = True
                         print ("Looking for resource matching " + str(displayName) + "...")
-                        object = AS.getResourceID(session, repository, refID, loginData)
-                        resourceURI = object.uri
-                        print ("Found " + object.title)
+                        object = helpers.get_resource_by_id(client, repository, refID)
+                        if object is None:
+                            raise ValueError(f"Could not find resource with ID: {refID}")
+                        resourceURI = object['uri']
+                        print ("Found " + object['title'])
                     else:
                         resourceLevel = False
                         try:
                              print ("Looking for archival object matching " + str(displayName) + "...")
                         except:
                             print ("Looking for archival object matching [non-ascii component name]...")
-                        object = AS.getArchObjID(session, repository, refID, loginData)
+                        object = helpers.get_archival_object_by_ref_id(client, repository, refID)
+                        if object is None:
+                            raise ValueError(f"Could not find archival object with ref_id: {refID}")
                         try:
-                            print ("Found " + str(object.title))
+                            print ("Found " + str(object['title']))
                         except:
                             print ("Found archival object matching [non-ascii component name].")
-                        resourceURI = object.resource.ref
-                        parentURI = object.uri
+                        resourceURI = object['resource']['ref']
+                        parentURI = object['uri']
                         
                     #get count of existing items
-                    childCount = 0
-                    for objectChild in AS.getChildren(session, object, loginData).children:
-                        childCount += 1
+                    if resourceLevel:
+                        children = helpers.get_children_waypoint(client, resourceURI)
+                    else:
+                        children = helpers.get_children_waypoint(client, resourceURI, parentURI)
+                    childCount = len(children)
                         
                     rowCount = 0
                     for row in sheet.rows:
@@ -136,24 +143,24 @@ try:
                             
                                 #make new file object if its new
                                 if row[0].value is None:
-                                    fileObject = AS.makeArchObj()
-                                    fileObject.level = "file"
+                                    fileObject = aspace_templates.archival_object()
+                                    fileObject['level'] = "file"
                                     if resourceLevel == True:
-                                        fileObject.resource = {"ref": resourceURI}
+                                        fileObject['resource'] = {"ref": resourceURI}
                                     else:
-                                        fileObject.parent = {"ref": parentURI}
-                                        fileObject.resource = {"ref": resourceURI}
+                                        fileObject['parent'] = {"ref": parentURI}
+                                        fileObject['resource'] = {"ref": resourceURI}
                                 else:
                                     #else get existing object
-                                    fileObject = AS.getArchObjID(session, repository, str(row[0].value).strip(), loginData)
+                                    fileObject = helpers.get_archival_object_by_ref_id(client, repository, str(row[0].value).strip())
+                                    if fileObject is None:
+                                        raise ValueError(f"Could not find archival object with ref_id: {row[0].value}")
                                     
                                 #set title and position
-                                fileObject.title = row[8].value.strip()
-                                #print (str(row[8].value) + " --> position " + str(itemCount) )
-                                fileObject.position = int(itemCount)
-                                #print (fileObject.position)
+                                fileObject['title'] = row[8].value.strip()
+                                fileObject['position'] = int(itemCount)
                                 #clear dates
-                                fileObject.dates = []
+                                fileObject['dates'] = []
                                 
                                 def updateDate(fileObject, normal, display):
                                     if display.lower().strip() == "none":
@@ -161,15 +168,15 @@ try:
                                     if "/" in normal:
                                         #date range
                                         if len(display) > 0:
-                                            fileObject = AS.makeDate(fileObject, normal.split("/")[0].strip(), normal.split("/")[1].strip(), display)
+                                            fileObject = helpers.add_date_to_object(fileObject, normal.split("/")[0].strip(), normal.split("/")[1].strip(), display)
                                         else:
-                                            fileObject = AS.makeDate(fileObject, normal.split("/")[0].strip(), normal.split("/")[1].strip())
+                                            fileObject = helpers.add_date_to_object(fileObject, normal.split("/")[0].strip(), normal.split("/")[1].strip())
                                     else:
                                         #single date
                                         if len(display) > 0:
-                                            fileObject = AS.makeDate(fileObject, normal, "", display)
+                                            fileObject = helpers.add_date_to_object(fileObject, normal, None, display)
                                         else:
-                                            fileObject = AS.makeDate(fileObject, normal)
+                                            fileObject = helpers.add_date_to_object(fileObject, normal)
                                     return fileObject
                                 
                                 def clearExcelEscape(dateString):
@@ -196,35 +203,17 @@ try:
                                     
                                 #scope note
                                 if not row[21].value is None:
-                                    newNotes = []
-                                    for note in fileObject.notes:
-                                        if note.type == "scopecontent":
-                                            pass
-                                        else:
-                                            newNotes.append(note)
-                                    fileObject.notes = newNotes
-                                    fileObject = AS.makeMultiNote(fileObject, "scopecontent", row[21].value)
+                                    fileObject = helpers.remove_notes_by_type(fileObject, "scopecontent")
+                                    fileObject = helpers.add_note_to_object(fileObject, "scopecontent", row[21].value)
                                 #general note
                                 if not row[20].value is None:
-                                    newNotes = []
-                                    for note in fileObject.notes:
-                                        if note.type == "odd":
-                                            pass
-                                        else:
-                                            newNotes.append(note)
-                                    fileObject.notes = newNotes
-                                    fileObject = AS.makeMultiNote(fileObject, "odd", row[20].value)
+                                    fileObject = helpers.remove_notes_by_type(fileObject, "odd")
+                                    fileObject = helpers.add_note_to_object(fileObject, "odd", row[20].value)
                                 #access restrict note
                                 if not row[19].value is None:
-                                    newNotes = []
-                                    for note in fileObject.notes:
-                                        if note.type == "accessrestrict":
-                                            pass
-                                        else:
-                                            newNotes.append(note)
-                                    fileObject.notes = newNotes
-                                    fileObject.restrictions_apply = True
-                                    fileObject = AS.makeMultiNote(fileObject, "accessrestrict", row[19].value)
+                                    fileObject = helpers.remove_notes_by_type(fileObject, "accessrestrict")
+                                    fileObject['restrictions_apply'] = True
+                                    fileObject = helpers.add_note_to_object(fileObject, "accessrestrict", row[19].value)
                                 
                                 
                                 
@@ -239,55 +228,53 @@ try:
                                         else:
                                             boxUri = str(row[3].value).strip()
                                             boxSession[str(row[4].value) + " " + str(row[5].value)] = boxUri
-                                        boxObject = AS.getContainer(session, boxUri, loginData)
+                                        boxObject = client.get(boxUri).json()
                                         #look for existing box link
                                         foundBox = False
                                         newInstances = []
-                                        for instance in fileObject.instances:
-                                            if "sub_container" in instance.keys():
-                                                if instance.sub_container.top_container.ref == boxUri:
+                                        for instance in fileObject.get('instances', []):
+                                            if "sub_container" in instance:
+                                                if instance['sub_container']['top_container']['ref'] == boxUri:
                                                     foundBox = True
                                                     newInstances.append(instance)
-                                            elif "digital_object" in instance.keys():
+                                            elif "digital_object" in instance:
                                                 newInstances.append(instance)
-                                        fileObject.instances = newInstances
+                                        fileObject['instances'] = newInstances
                                         if foundBox == False:
                                             #link to existing box
-                                            fileObject = AS.addToContainer(session, fileObject, boxUri, None, None, loginData)
+                                            fileObject = helpers.add_container_to_object(fileObject, boxUri, None, None)
                                             
                                         #modify existing box
-                                        for instance in fileObject.instances:
-                                            if "sub_container" in instance.keys():
+                                        for instance in fileObject.get('instances', []):
+                                            if "sub_container" in instance:
                                                 if instance["sub_container"]["top_container"]["ref"] == boxUri:
                                                     if not row[4].value is None:
                                                         instance["sub_container"]["type_1"] = str(row[4].value).strip()
-                                                        boxObject.type = str(row[4].value).strip()
+                                                        boxObject['type'] = str(row[4].value).strip()
                                                     if not row[5].value is None:
                                                         instance["sub_container"]["indicator_1"] = str(row[5].value).strip()
-                                                        boxObject.indicator = str(row[5].value).strip()
+                                                        boxObject['indicator'] = str(row[5].value).strip()
                                                     if not row[6].value is None:
-                                                        instance["sub_container"]["type_2"] = str(row[6].value).strip()
                                                         instance["sub_container"]["type_2"] = str(row[6].value).strip()
                                                     if not row[7].value is None:
                                                         instance["sub_container"]["indicator_2"] = str(row[7].value).strip()
-                                                        instance["sub_container"]["indicator_2"] = str(row[7].value).strip()
                                         #add any restrictions to box
                                         if not row[19].value is None:
-                                            boxObject.restricted = True
+                                            boxObject['restricted'] = True
                                         
                                         
                                         #update locations
                                         if not row[1].value is None:
                                             for locationURI in str(row[1].value).split(";"):
                                                 locTest = False
-                                                for location in boxObject.container_locations:
+                                                for location in boxObject.get('container_locations', []):
                                                     if location["ref"] == locationURI.strip():
                                                         locTest = True
                                                 if locTest == False:
-                                                    boxObject = AS.addToLocation(boxObject, locationURI)
+                                                    boxObject = helpers.add_location_to_container(boxObject, locationURI)
                                         elif not row[2].value is None:
                                             #remove existing locations
-                                            boxObject.container_locations = []
+                                            boxObject['container_locations'] = []
                                             
                                             #location, but without URI
                                             locCount = 0
@@ -300,36 +287,36 @@ try:
                                                     coordinates = locationSet.strip()
                                                     locationNote = None
                                                 
-                                                coordList = uaLocations.location2ASpace(coordinates.strip(), locationNote)
+                                                coordList = ua_locations.location_to_aspace(coordinates.strip(), locationNote)
                                                 if coordList[1] is False:
                                                     #single location
                                                     locTitle = coordList[0]["Title"]
-                                                    locationURI = AS.findLocation(session, locTitle, loginData)
+                                                    locationURI = ua_locations.find_location_uri(client, repository, locTitle)
                                                     if len(coordList[0]["Note"]) > 0:
                                                         if locCount > 1:
-                                                            boxObject = AS.addToLocation(boxObject, locationURI, coordList[0]["Note"], "previous", "2999-01-01")
+                                                            boxObject = helpers.add_location_to_container(boxObject, locationURI, coordList[0]["Note"], "previous", "2999-01-01")
                                                         else:
-                                                            boxObject = AS.addToLocation(boxObject, locationURI, coordList[0]["Note"])
+                                                            boxObject = helpers.add_location_to_container(boxObject, locationURI, coordList[0]["Note"])
                                                     else:
                                                         if locCount > 1:
-                                                            boxObject = AS.addToLocation(boxObject, locationURI, None, "previous", "2999-01-01")
+                                                            boxObject = helpers.add_location_to_container(boxObject, locationURI, None, "previous", "2999-01-01")
                                                         else:
-                                                            boxObject = AS.addToLocation(boxObject, locationURI)
+                                                            boxObject = helpers.add_location_to_container(boxObject, locationURI)
                                                 else:
                                                     #multiple locations
                                                     for location in coordList[0]:
                                                         locTitle = location["Title"]
-                                                        locationURI = AS.findLocation(session, locTitle, loginData)
+                                                        locationURI = ua_locations.find_location_uri(client, repository, locTitle)
                                                         if len(location["Note"]) > 0:
                                                             if locCount > 1:
-                                                                boxObject = AS.addToLocation(boxObject, locationURI, location["Note"], "previous", "2999-01-01")
+                                                                boxObject = helpers.add_location_to_container(boxObject, locationURI, location["Note"], "previous", "2999-01-01")
                                                             else:
-                                                                boxObject = AS.addToLocation(boxObject, locationURI, location["Note"])
+                                                                boxObject = helpers.add_location_to_container(boxObject, locationURI, location["Note"])
                                                         else:
                                                             if locCount > 1:
-                                                                boxObject = AS.addToLocation(boxObject, locationURI, None, "previous", "2999-01-01")
+                                                                boxObject = helpers.add_location_to_container(boxObject, locationURI, None, "previous", "2999-01-01")
                                                             else:
-                                                                boxObject = AS.addToLocation(boxObject, locationURI)
+                                                                boxObject = helpers.add_location_to_container(boxObject, locationURI)
                                             print ("        Added location(s) to containers")
                                                 
                                         
@@ -337,17 +324,13 @@ try:
                                         #new box
                                         
                                         #delete existing boxes
-                                        newInstances = []
-                                        for instance in fileObject.instances:
-                                            if "sub_container" in instance.keys():
-                                                pass
-                                            else:
-                                                newInstances.append(instance)
-                                        fileObject.instances = newInstances
+                                        fileObject = helpers.remove_container_instances(fileObject)
                                         #makes and posts a new container
-                                        boxObject = AS.makeContainer(session, repository, str(row[4].value).strip(), str(row[5].value).strip(), loginData)
+                                        boxObject = aspace_templates.top_container(str(row[4].value).strip(), str(row[5].value).strip())
+                                        boxResponse = helpers.post_container(client, repository, boxObject)
+                                        boxUri = boxResponse['uri']
                                         #update dict of new boxes for this sheet
-                                        boxSession[str(row[4].value).strip() + " " + str(row[5].value).strip()] = boxObject.uri
+                                        boxSession[str(row[4].value).strip() + " " + str(row[5].value).strip()] = boxUri
                                         if not row[6].value is None:
                                             childContainer = str(row[6].value).strip()
                                         else:
@@ -356,23 +339,25 @@ try:
                                             childIndicator = str(row[7].value).strip()
                                         else:
                                             childIndicator = None
-                                        fileObject = AS.addToContainer(session, fileObject, boxObject.uri, childContainer,  childIndicator, loginData)
+                                        fileObject = helpers.add_container_to_object(fileObject, boxUri, childContainer, childIndicator)
                                         #add any restrictions to box
                                         if not row[19].value is None:
-                                            boxObject.restricted = True
+                                            boxObject['restricted'] = True
+                                        # Get the box object again after posting
+                                        boxObject = client.get(boxUri).json()
                                             
                                         #update locations
                                         if not row[1].value is None:
                                             for locationURI in str(row[1].value).split(";"):
                                                 locTest = False
-                                                for location in boxObject.container_locations:
+                                                for location in boxObject.get('container_locations', []):
                                                     if location["ref"] == locationURI.strip():
                                                         locTest = True
                                                 if locTest == False:
-                                                    boxObject = AS.addToLocation(boxObject, locationURI)
+                                                    boxObject = helpers.add_location_to_container(boxObject, locationURI)
                                         elif not row[2].value is None:
                                             #remove existing locations from boxObject
-                                            boxObject.container_locations = []
+                                            boxObject['container_locations'] = []
                                         
                                             #location, but without URI
                                             locCount = 0
@@ -385,59 +370,51 @@ try:
                                                     coordinates = locationSet.strip()
                                                     locationNote = None
                                                 
-                                                coordList = uaLocations.location2ASpace(coordinates.strip(), locationNote)
+                                                coordList = ua_locations.location_to_aspace(coordinates.strip(), locationNote)
                                                 if coordList[1] is False:
                                                     #single location
                                                     locTitle = coordList[0]["Title"]
-                                                    locationURI = AS.findLocation(session, locTitle, loginData)
+                                                    locationURI = ua_locations.find_location_uri(client, repository, locTitle)
                                                     if len(coordList[0]["Note"]) > 0:
                                                         if locCount > 1:
-                                                            boxObject = AS.addToLocation(boxObject, locationURI, coordList[0]["Note"], "previous", "2999-01-01")
+                                                            boxObject = helpers.add_location_to_container(boxObject, locationURI, coordList[0]["Note"], "previous", "2999-01-01")
                                                         else:
-                                                            boxObject = AS.addToLocation(boxObject, locationURI, coordList[0]["Note"])
+                                                            boxObject = helpers.add_location_to_container(boxObject, locationURI, coordList[0]["Note"])
                                                     else:
                                                         if locCount > 1:
-                                                            boxObject = AS.addToLocation(boxObject, locationURI, None, "previous", "2999-01-01")
+                                                            boxObject = helpers.add_location_to_container(boxObject, locationURI, None, "previous", "2999-01-01")
                                                         else:
-                                                            boxObject = AS.addToLocation(boxObject, locationURI)
+                                                            boxObject = helpers.add_location_to_container(boxObject, locationURI)
                                                 else:
                                                     #multiple locations
                                                     for location in coordList[0]:
                                                         locTitle = location["Title"]
-                                                        locationURI = AS.findLocation(session, locTitle, loginData)
+                                                        locationURI = ua_locations.find_location_uri(client, repository, locTitle)
                                                         if len(location["Note"]) > 0:
                                                             if locCount > 1:
-                                                                boxObject = AS.addToLocation(boxObject, locationURI, location["Note"], "previous", "2999-01-01")
+                                                                boxObject = helpers.add_location_to_container(boxObject, locationURI, location["Note"], "previous", "2999-01-01")
                                                             else:
-                                                                boxObject = AS.addToLocation(boxObject, locationURI, location["Note"])
+                                                                boxObject = helpers.add_location_to_container(boxObject, locationURI, location["Note"])
                                                         else:
                                                             if locCount > 1:
-                                                                boxObject = AS.addToLocation(boxObject, locationURI, None, "previous", "2999-01-01")
+                                                                boxObject = helpers.add_location_to_container(boxObject, locationURI, None, "previous", "2999-01-01")
                                                             else:
-                                                                boxObject = AS.addToLocation(boxObject, locationURI)
+                                                                boxObject = helpers.add_location_to_container(boxObject, locationURI)
                                             print ("        Added location(s) to containers")
                                         
                                     #post top container object
-                                    postBox = AS.postContainer(session, repository, boxObject, loginData)
-                                    if postBox.status_code == 200:
+                                    postResponse = client.post(boxObject['uri'], json=boxObject)
+                                    if postResponse.status_code == 200:
                                         print ("        Posted " + str(row[4].value) + " " + str(row[5].value))
                                     else:
-                                        print ("    Failed to post " +  str(row[4].value) + " " + str(row[5].value) + ", error code " + str(postBox))
-                                        AS.pp(boxObject)
+                                        print ("    Failed to post " +  str(row[4].value) + " " + str(row[5].value) + ", error code " + str(postResponse.status_code))
+                                        print(json.dumps(boxObject, indent=2))
                                 
                                     
                                 
                                 #post file object
-                                fileObject.publish = True
-                                #postAO = AS.postArchObj(session, repository, fileObject, loginData)
-                                aoString = json.dumps(fileObject)
-                                aoObj = json.loads(aoString)                                
-                                if "ref_id" in fileObject:
-                                    aoID = fileObject.uri.split("/archival_objects/")[1]
-                                    postAO = requests.post(loginData[0] + "/repositories/" + str(repository) + "/archival_objects/" + aoID, json=aoObj, headers=session)
-                                else:
-                                    postAO = requests.post(loginData[0] + "/repositories/" + str(repository) + "/archival_objects", json=aoObj, headers=session)
-                                AS.checkError(postAO)
+                                fileObject['publish'] = True
+                                postAO = helpers.post_archival_object(client, repository, fileObject)
                                 
                                 if postAO.status_code == 200:
                                     try:
@@ -459,34 +436,23 @@ try:
                                             
                                             #get nessessary parent data
                                             aoURI = postAO.json()["uri"]
-                                            ao = AS.getArchObj(session, aoURI, loginData)
-                                            aoRef = ao["ref_id"]
-                                            resourceURI = ao["resource"]["ref"]
-                                            coll = AS.getResource(session, repository, resourceURI.split("/resources/")[1], loginData)
-                                            resourceID = coll["id_0"]
+                                            ao = client.get(aoURI).json()
                                             
-                                            if not str(row[22].value).strip().lower().startswith("http"):
-                                                
-                                                pass
-                                                # will now ignore non-http daos, must upload to Hyrax and get uris first
-                                                    
-                                            else:
-                                                #for simple http links
-                                                finalFile = str(row[22].value).strip()
-                                                fileTitle = os.path.basename(row[22].value)
-                                                if len(fileTitle) < 1:
-                                                    fileTitle = str(row[8].value).strip()
-                                                daoLink = finalFile                        
+                                            #for simple http links
+                                            finalFile = str(row[22].value).strip()
+                                            fileTitle = os.path.basename(row[22].value)
+                                            if len(fileTitle) < 1:
+                                                fileTitle = str(row[8].value).strip()
+                                            daoLink = finalFile                        
                                             
-                                            daoObject = AS.makeDAO(fileTitle, daoLink)
-                                            #untested change here
+                                            daoObject = aspace_templates.digital_object(fileTitle, daoLink)
                                             daoObject["publish"] = True
-                                            postDAO = AS.postDAO(session, repository, daoObject, loginData)
+                                            postDAO = helpers.post_digital_object(client, repository, daoObject)
                                             if postDAO.status_code == 200:
                                                 daoURI = postDAO.json()["uri"]
                                                 
-                                                ao = AS.addDAO(ao, daoURI, False)
-                                                postAO = AS.postArchObj(session, repository, ao, loginData)
+                                                ao = helpers.add_digital_object_to_object(ao, daoURI)
+                                                postAO = helpers.post_archival_object(client, repository, ao)
                                                 if not postAO.status_code == 200:
                                                     raise ValueError("Error posting archival object with digital object " + str(row[22].value) + " HTTP response " + str(postAO.status_code) + ". Object: " + json.dumps(ao, indent=2))
                                                                                                 
@@ -532,3 +498,10 @@ if sys.version_info >= (3, 0):
 	input()
 else:
 	raw_input()
+
+def main():
+	"""Entry point for console script"""
+	pass  # The code above already executes at module level
+
+if __name__ == "__main__":
+	pass  # Code executes at module level

@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "asinventory"
+dynamic = ["version", "dependencies"]
+description = "Manage file-level ArchivesSpace inventories with spreadsheets"
+readme = "README.md"
+requires-python = ">=3.7"
+license = {file = "LICENSE"}
+authors = [
+    {name = "UAlbany Archives"}
+]
+
+[project.urls]
+Homepage = "https://github.com/UAlbanyArchives/asInventory"
+Repository = "https://github.com/UAlbanyArchives/asInventory"
+Issues = "https://github.com/UAlbanyArchives/asInventory/issues"
+
+[project.scripts]
+asdownload = "asDownload:main"
+asupload = "asUpload:main"
+asvalidate = "asValidate:main"
+
+[tool.setuptools]
+py-modules = ["asDownload", "asUpload", "asValidate", "aspace_helpers", "aspace_templates", "ua_locations", "daoList", "dateList", "testLength"]
+
+[tool.setuptools.dynamic]
+version = {attr = "__init__.__version__"}
+dependencies = {file = ["requirements.txt"]}
