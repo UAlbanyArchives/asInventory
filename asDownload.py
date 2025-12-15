@@ -1,62 +1,78 @@
 import os
 import re
 import sys
+import json
 import datetime
 import traceback
 from subprocess import Popen, PIPE, STDOUT
 
 #non-standard dependencies
-import configparser
 import openpyxl
-from archives_tools import aspace as AS
-from archives_tools import uaLocations
+import yaml
+from asnake.client import ASnakeClient
 
 def safe_filename(s):
     return re.sub(r'[<>:"/\\|?*\x00-\x1F]', '_', s).strip().rstrip('.')
 
-def getInput(object, displayTitle, resourceLevel, session):
+def getInput(object, displayTitle, resourceLevel, client, repository):
 	
 	#get ID value
 	print ("Export Resource(r) or archival object(ao):")
-	if sys.version_info >= (3, 0):
-		level = input()
-	else:
-		level = raw_input()
+	level = input()
+
 	
 	#get ID value
 	print ("Enter ID:")
-	if sys.version_info >= (3, 0):
-		cmpntID = input()
-	else:
-		cmpntID = raw_input()
-	
+	cmpntID = input()
+
 	#basic error handling:
 	if len(cmpntID) < 1:
 		print ("Missing ID. Please Enter a Ref ID for an Archival Object or an id_0 for a Resource.")
-		object, displayTitle, resourceLevel = getInput(object, displayTitle, resourceLevel, session)
+		object, displayTitle, resourceLevel = getInput(object, displayTitle, resourceLevel, client, repository)
 	else:
 		if level.lower().strip() == "resource" or level.lower().strip() == "r":
 			print ("Looking for Resource...")
-			object = AS.getResourceID(session, repository, cmpntID, loginData)		
+			try:
+				# Search for resource by identifier using advanced query
+				aq = json.dumps({"query": {"field": "identifier", "value": cmpntID, "jsonmodel_type": "field_query"}})
+				search_results = client.get('repositories/{}/search'.format(repository), 
+					params={'page': '1', 'aq': aq}).json()
+				if search_results.get('total_hits', 0) > 0:
+					resource_uri = search_results['results'][0]['uri']
+					object = client.get(resource_uri).json()
+					resourceLevel = True
+					displayTitle = object['title'].replace("/", "-")
+				else:
+					object = None
+			except:
+				object = None
+			
 			if object is None:
 				print ("Try Again\n\n")
-				object, displayTitle, resourceLevel = getInput(object, displayTitle, resourceLevel, session)
-			else:
-				resourceLevel = True
-				displayTitle = object.title.replace("/", "-")
+				object, displayTitle, resourceLevel = getInput(object, displayTitle, resourceLevel, client, repository)
 		else:
 			if len(cmpntID) != 32:
 				print ("It looks like you selcted archival object, but this is not an archival object ref_id. Check that you have the correct ID or select resource instead.\n\n")
-				object, displayTitle, resourceLevel = getInput(object, displayTitle, resourceLevel, session)
+				object, displayTitle, resourceLevel = getInput(object, displayTitle, resourceLevel, client, repository)
 			else:
 				print ("Looking for Archival Object...")
-				object = AS.getArchObjID(session, repository, cmpntID, loginData)
+				try:
+					# Find archival object by ref_id
+					ao_result = client.get('repositories/{}/find_by_id/archival_objects'.format(repository), 
+						params={'ref_id[]': cmpntID}).json()
+					if ao_result.get('archival_objects'):
+						ao_uri = ao_result['archival_objects'][0]['ref']
+						object = client.get(ao_uri).json()
+						resourceLevel = False
+						displayTitle = object.get('display_string', object.get('title', ''))
+					else:
+						object = None
+				except:
+					object = None
+					
 				if object is None:
 					print ("Try Again\n\n")
-					object, displayTitle, resourceLevel = getInput(object, displayTitle, resourceLevel, session)
-				else:
-					resourceLevel = False
-					displayTitle = object.display_string
+					object, displayTitle, resourceLevel = getInput(object, displayTitle, resourceLevel, client, repository)
 			
 	return object, displayTitle, resourceLevel
 
@@ -68,20 +84,6 @@ try:
 	else:
 		# Running as a normal Python script
 		__location__ = os.path.dirname(os.path.abspath(__file__))
-
-	# get local_settings
-	configPath = os.path.join(__location__, "local_settings.cfg")
-	if not os.path.isfile(configPath):
-		raise ValueError("ERROR: Could not find local_settings.cfg")
-	config = configparser.ConfigParser()
-	config.read(configPath)
-
-	baseURL = config.get('ArchivesSpace', 'baseURL')
-	repository = config.get('ArchivesSpace', 'repository')
-	user = config.get('ArchivesSpace', 'user')
-	password = config.get('ArchivesSpace', 'password')
-	loginData = (baseURL, user, password)
-	
 
 	# required directories, make them if they don't exist
 	inputPath = os.path.join(__location__, "input")
@@ -98,24 +100,39 @@ try:
 		os.mkdir(daoPath)
 		
 	#Connect to ASpace
-	session = AS.getSession(loginData)
-	if session is None:
-		raise ValueError("ERROR: ArchivesSpace login failed. Please check settings in local_settings.cfg")
+	try:
+		client = ASnakeClient()
+		client.authorize()
+		print ("ASpace Connection Successful")
+	except:
+		raise ValueError("ERROR: ArchivesSpace login failed. Please check archivessnake configuration")
+	
+	# Get repository ID from config file or default to 2
+	try:
+		config_file = os.path.join(os.path.expanduser('~'), 'asinventory.yml')
+		if os.path.isfile(config_file):
+			with open(config_file, 'r') as f:
+				config = yaml.safe_load(f)
+				repository = str(config.get('repository', '2'))
+		else:
+			repository = '2'
+	except:
+		repository = '2'
 		
 	# get user input and the object
-	object, displayTitle, resourceLevel = getInput(None, "", False, session)
+	object, displayTitle, resourceLevel = getInput(None, "", False, client, repository)
 		
 	#create Workbook object
 	wb = openpyxl.Workbook()
 		
-	simpleTitle = safe_filename(object.title.replace("/", "-"))
+	simpleTitle = safe_filename(object['title'].replace("/", "-"))
 	print ("Reading " + simpleTitle)
 	
 	
 	if resourceLevel == True:
-		objectID = object.id_0
+		objectID = object['id_0']
 	else:
-		objectID = object.ref_id
+		objectID = object['ref_id']
 	
 	#make a sheet
 	worksheet = wb.active
@@ -158,62 +175,88 @@ try:
 	#get table styles
 	tableStyle = openpyxl.worksheet.table.TableStyleInfo(name='TableStyleMedium2', showRowStripes=True)
 	
+	# Function to get children using waypoint API
+	def get_children_waypoint(client, resource_uri, node_uri=None):
+		children = []
+		try:
+			if node_uri is None:
+				# Get root level children
+				tree = client.get(resource_uri + '/tree/root').json()
+			else:
+				# Get children of specific node
+				tree = client.get(resource_uri + '/tree/node', params={'node_uri': node_uri}).json()
+			
+			max_offset = tree.get('waypoints', 0)
+			
+			for i in range(max_offset):
+				batch_params = {'offset': i}
+				if node_uri is not None:
+					batch_params['parent_node'] = node_uri
+				batch = client.get(resource_uri + '/tree/waypoint', params=batch_params).json()
+				for child in batch:
+					children.append({'record_uri': child['uri'], 'title': child.get('title', '')})
+		except Exception as e:
+			print(f"Error getting children: {e}")
+		return children
+	
+	# Get children using waypoint API
+	childrenList = []
 	if resourceLevel == True:
-		resourceTree = AS.getTree(session, object, loginData)
-		childrenList = resourceTree.children
+		childrenList = get_children_waypoint(client, object['uri'])
 	else:
-		childTree = AS.getChildren(session, object, loginData)
-		childrenList = childTree.children
+		# For archival objects
+		resource_uri = object['resource']['ref']
+		childrenList = get_children_waypoint(client, resource_uri, object['uri'])
 		
 	lineCount = 6
 	for child in childrenList:
-		childObject = AS.getArchObj(session, child.record_uri, loginData)
+		childObject = client.get(child['record_uri']).json()
 		lineCount = lineCount + 1
-		worksheet["A" + str(lineCount)] = childObject.ref_id
-		worksheet["I" + str(lineCount)] = childObject.title
+		worksheet["A" + str(lineCount)] = childObject['ref_id']
+		worksheet["I" + str(lineCount)] = childObject['title']
 		try:
-			print ("	exporting " + childObject.title)
+			print ("	exporting " + childObject['title'])
 		except:
 			print ("	exporting non-ascii file...")
 		
 		# containers and locations		 
-		if len(childObject.instances) > 0:
-			if "sub_container" in childObject.instances[0].keys():
-				container = childObject.instances[0].sub_container
-				containerURI = container.top_container.ref
+		if len(childObject.get('instances', [])) > 0:
+			if "sub_container" in childObject['instances'][0]:
+				container = childObject['instances'][0]['sub_container']
+				containerURI = container['top_container']['ref']
 				worksheet["D" + str(lineCount)] = containerURI
-				if "type_2" in container.keys():
-					worksheet["G" + str(lineCount)] = container.type_2
-				if "indicator_2" in container.keys():
-					worksheet["H" + str(lineCount)] = container.indicator_2
+				if "type_2" in container:
+					worksheet["G" + str(lineCount)] = container['type_2']
+				if "indicator_2" in container:
+					worksheet["H" + str(lineCount)] = container['indicator_2']
 					
-				containerObject = AS.getContainer(session, containerURI, loginData)
-				worksheet["E" + str(lineCount)] = containerObject.type
-				worksheet["F" + str(lineCount)] = containerObject.indicator
+				containerObject = client.get(containerURI).json()
+				worksheet["E" + str(lineCount)] = containerObject['type']
+				worksheet["F" + str(lineCount)] = containerObject['indicator']
 				
 				locationCount = 0
-				for location in containerObject.container_locations:
+				for location in containerObject.get('container_locations', []):
 					locationCount = locationCount + 1
-					locationObject = AS.getLocation(session, location.ref, loginData)
-					if "area" in locationObject.keys():
-						locationCoordinates = locationObject.area + "-" + locationObject.coordinate_1_indicator
+					locationObject = client.get(location['ref']).json()
+					if "area" in locationObject:
+						locationCoordinates = locationObject['area'] + "-" + locationObject['coordinate_1_indicator']
 					else:
-						locationCoordinates = locationObject.room + "-" + locationObject.coordinate_1_indicator
-					if "coordinate_2_indicator" in locationObject.keys():
-						locationCoordinates = locationCoordinates + "-" + locationObject.coordinate_2_indicator
-					if "coordinate_3_indicator" in locationObject.keys():
-						locationCoordinates = locationCoordinates + "-" + locationObject.coordinate_3_indicator
+						locationCoordinates = locationObject['room'] + "-" + locationObject['coordinate_1_indicator']
+					if "coordinate_2_indicator" in locationObject:
+						locationCoordinates = locationCoordinates + "-" + locationObject['coordinate_2_indicator']
+					if "coordinate_3_indicator" in locationObject:
+						locationCoordinates = locationCoordinates + "-" + locationObject['coordinate_3_indicator']
 					if locationCount < 2:
-						worksheet["B" + str(lineCount)] = locationObject.uri
+						worksheet["B" + str(lineCount)] = locationObject['uri']
 						worksheet["C" + str(lineCount)] = locationCoordinates
 					else:
-						worksheet["B" + str(lineCount)] = worksheet["B" + str(lineCount)].value + "; " + locationObject.uri
+						worksheet["B" + str(lineCount)] = worksheet["B" + str(lineCount)].value + "; " + locationObject['uri']
 						worksheet["C" + str(lineCount)] = worksheet["C" + str(lineCount)].value + "; " + locationCoordinates					
 				
 		
 		#dates
 		dateCount = 0
-		for date in childObject.dates:
+		for date in childObject.get('dates', []):
 			dateCount = dateCount + 1
 			if dateCount == 1:
 				displayCell = "J"
@@ -231,44 +274,44 @@ try:
 				displayCell = "R"
 				normalCell = "S"
 			elif dateCount > 5:
-				raise ValueError("ERROR more than 5 dates for " + "uri: " + childObject.uri + " ref_id: " + childObject.ref_id)
-			if "end" in date.keys():
-				worksheet[normalCell + str(lineCount)] = date.begin + "/" + date.end
+				raise ValueError("ERROR more than 5 dates for " + "uri: " + childObject['uri'] + " ref_id: " + childObject['ref_id'])
+			if "end" in date:
+				worksheet[normalCell + str(lineCount)] = date['begin'] + "/" + date['end']
 			else:
-				worksheet[normalCell + str(lineCount)] = date.begin
-			if "expression" in date.keys():
-				worksheet[displayCell + str(lineCount)] = date.expression
-			if "certainty" in date.keys():
+				worksheet[normalCell + str(lineCount)] = date['begin']
+			if "expression" in date:
+				worksheet[displayCell + str(lineCount)] = date['expression']
+			if "certainty" in date:
 				if worksheet[displayCell + str(lineCount)].value is None:
-					worksheet[displayCell + str(lineCount)] = date.certainty
+					worksheet[displayCell + str(lineCount)] = date['certainty']
 				else:
-					worksheet[displayCell + str(lineCount)] = date.certainty + " " + worksheet[displayCell + str(lineCount)].value
+					worksheet[displayCell + str(lineCount)] = date['certainty'] + " " + worksheet[displayCell + str(lineCount)].value
 		
-		for note in childObject.notes:
-			if note.type == "accessrestrict":
+		for note in childObject.get('notes', []):
+			if note['type'] == "accessrestrict":
 				subCount = 0
-				for subnote in note.subnotes:
+				for subnote in note.get('subnotes', []):
 					subCount = subCount + 1
 					if subCount < 1:
-						worksheet["T" + str(lineCount)] = worksheet["T" + str(lineCount)] + "; " +  subnote.content
+						worksheet["T" + str(lineCount)] = worksheet["T" + str(lineCount)] + "; " +  subnote['content']
 					else:
-						worksheet["T" + str(lineCount)] = subnote.content
-			elif note.type == "odd":
+						worksheet["T" + str(lineCount)] = subnote['content']
+			elif note['type'] == "odd":
 				subCount = 0
-				for subnote in note.subnotes:
+				for subnote in note.get('subnotes', []):
 					subCount = subCount + 1
 					if subCount < 1:
-						worksheet["U" + str(lineCount)] = worksheet["U" + str(lineCount)] + "; " +  subnote.content
+						worksheet["U" + str(lineCount)] = worksheet["U" + str(lineCount)] + "; " +  subnote['content']
 					else:
-						worksheet["U" + str(lineCount)] = subnote.content
-			elif note.type == "scopecontent":
+						worksheet["U" + str(lineCount)] = subnote['content']
+			elif note['type'] == "scopecontent":
 				subCount = 0
-				for subnote in note.subnotes:
+				for subnote in note.get('subnotes', []):
 					subCount = subCount + 1
 					if subCount < 1:
-						worksheet["V" + str(lineCount)] = worksheet["V" + str(lineCount)] + "; " +  subnote.content
+						worksheet["V" + str(lineCount)] = worksheet["V" + str(lineCount)] + "; " +  subnote['content']
 					else:
-						worksheet["V" + str(lineCount)] = subnote.content
+						worksheet["V" + str(lineCount)] = subnote['content']
 		
 	print ("Writing spreadsheet " + simpleTitle + ".xlsx to " + outputPath)
 	
@@ -293,10 +336,7 @@ try:
 	
 	# make sure console doesn't close
 	print ("Press any key to continue. Enter Yes(y) to open output folder.")
-	if sys.version_info >= (3, 0):
-		openFolder = input()
-	else:
-		openFolder = raw_input()
+	openFolder = input()
 
 	if openFolder.lower().strip() == "y" or openFolder.lower().strip() == "yes":
 		openCmd = "start " + outputPath
@@ -313,7 +353,4 @@ except:
 
 	# make sure console doesn't close
 	print ("Press anykey to continue...")
-	if sys.version_info >= (3, 0):
-		input()
-	else:
-		raw_input()
+	input()
