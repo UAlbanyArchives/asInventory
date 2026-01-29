@@ -10,9 +10,9 @@ import sys
 import openpyxl
 import yaml
 from asnake.client import ASnakeClient
-import aspace_templates
-import aspace_helpers as helpers
-import ua_locations
+from . import aspace_templates
+from . import aspace_helpers as helpers
+from . import ua_locations
 
 # Main error handleing
 try:
