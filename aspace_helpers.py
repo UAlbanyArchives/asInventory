@@ -3,7 +3,7 @@ Helper functions for ArchivesSpace operations using archivessnake.
 Provides convenience wrappers around common API operations.
 """
 import json
-from . import aspace_templates
+import aspace_templates
 
 
 def get_children_waypoint(client, resource_uri, node_uri=None):

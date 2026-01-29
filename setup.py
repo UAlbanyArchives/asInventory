@@ -35,10 +35,7 @@ setup(
         "asValidate",
         "aspace_helpers",
         "aspace_templates",
-        "ua_locations",
-        "daoList",
-        "dateList",
-        "testLength"
+        "ua_locations"
     ],
     python_requires=">=3.7",
     install_requires=requirements,

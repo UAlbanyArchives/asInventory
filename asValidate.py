@@ -2,7 +2,7 @@ import os
 import openpyxl
 import sys
 import string
-from . import aspace_helpers as helpers
+import aspace_helpers as helpers
 
 __location__ = (os.path.dirname(os.path.realpath(__file__)))
 inputPath = os.path.join(__location__, "input")
