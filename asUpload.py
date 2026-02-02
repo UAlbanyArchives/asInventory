@@ -291,7 +291,7 @@ try:
                                                 if coordList[1] is False:
                                                     #single location
                                                     locTitle = coordList[0]["Title"]
-                                                    locationURI = ua_locations.find_location_uri(client, repository, locTitle)
+                                                    locationURI = ua_locations.find_location_uri(client, locTitle)
                                                     if len(coordList[0]["Note"]) > 0:
                                                         if locCount > 1:
                                                             boxObject = helpers.add_location_to_container(boxObject, locationURI, coordList[0]["Note"], "previous", "2999-01-01")
@@ -328,7 +328,7 @@ try:
                                         #makes and posts a new container
                                         boxObject = aspace_templates.top_container(str(row[4].value).strip(), str(row[5].value).strip())
                                         boxResponse = helpers.post_container(client, repository, boxObject)
-                                        boxUri = boxResponse['uri']
+                                        boxUri = boxResponse.json()['uri']
                                         #update dict of new boxes for this sheet
                                         boxSession[str(row[4].value).strip() + " " + str(row[5].value).strip()] = boxUri
                                         if not row[6].value is None:
@@ -374,7 +374,7 @@ try:
                                                 if coordList[1] is False:
                                                     #single location
                                                     locTitle = coordList[0]["Title"]
-                                                    locationURI = ua_locations.find_location_uri(client, repository, locTitle)
+                                                    locationURI = ua_locations.find_location_uri(client, locTitle)
                                                     if len(coordList[0]["Note"]) > 0:
                                                         if locCount > 1:
                                                             boxObject = helpers.add_location_to_container(boxObject, locationURI, coordList[0]["Note"], "previous", "2999-01-01")
@@ -389,7 +389,7 @@ try:
                                                     #multiple locations
                                                     for location in coordList[0]:
                                                         locTitle = location["Title"]
-                                                        locationURI = ua_locations.find_location_uri(client, repository, locTitle)
+                                                        locationURI = ua_locations.find_location_uri(client, locTitle)
                                                         if len(location["Note"]) > 0:
                                                             if locCount > 1:
                                                                 boxObject = helpers.add_location_to_container(boxObject, locationURI, location["Note"], "previous", "2999-01-01")
