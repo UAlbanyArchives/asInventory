@@ -59,6 +59,20 @@ export ASINVENTORY_BASE_DIR=/path/to/asinventory
 
 The `--base-dir` CLI argument, when provided, takes precedence over `ASINVENTORY_BASE_DIR`.
 
+### Disabling Interactive Prompts
+
+`asdownload`, `asupload`, and `asvalidate` prompt for input (e.g. "Press Enter to continue...") by default when run directly. Set `ASINVENTORY_INTERACTIVE` to `0`, `false`, `no`, or `off` to suppress these prompts without passing `--interactive` flags:
+
+```bash
+# Windows (PowerShell)
+$env:ASINVENTORY_INTERACTIVE = "0"
+
+# macOS/Linux
+export ASINVENTORY_INTERACTIVE=0
+```
+
+The `asinventory` unified CLI already runs non-interactively and is unaffected by this variable.
+
 ## Required Directories
 
 asInventory requires these directories (will be created automatically when scripts run):
@@ -129,7 +143,7 @@ python asValidate.py
 	![](screenshots/screenshot3.png)
 4. Click "OK" and a list of files exported will print to the console. This may take some time for large file listings.
 5. If the export is successful, you will be given the option to open the output directory to view the exported file
-6. A new Spreadsheet file will be placed in the `output` directory. **WARNING: files with the same name in this directory will be overwritten.**
+6. A new spreadsheet file, named after the record's ID (e.g., `<id_0>.xlsx` or `<ref_id>.xlsx`), will be placed in the `output` directory. **WARNING: files with the same name in this directory will be overwritten.**
 
 Example with an output override:
 
@@ -139,12 +153,9 @@ asinventory download --output C:\work\output
 
 #### To import an inventory
 
-1. Make a copy of asInventory.xlsx, you can name it anything you'd like.
+1. Make a copy of asInventory.xlsx and **rename the file to the record's ID**: use the `id_0` for a resource (collection with no series) or the `ref_id` for an archival object (series, subseries, or other component). The filename (minus `.xlsx`) is used as the ID — a 32-character filename is treated as an archival object `ref_id`, anything else is treated as a resource `id_0`.
 2. Open the spreadsheet and add a folder listing:
-	* **Mandatory fields:**
-		* Level (I2) must be "resource" for collection level with no series, or "archival object"
-		* RefID (I3) must be id_0 for resource parent or ref_id for archival object parent
-	* Title (I1) is not mandatory and can be anything, sheet name can also be anything
+	* Column headers must be on row 1, with folder listing content starting on row 2
 	* Many columns can be left blank
 	* If an ID (column A) is entered, asInventory will find and update an existing record
 	* If no ID is entered, asInventory will create a new archival object child
@@ -155,7 +166,7 @@ asinventory download --output C:\work\output
 	* Can create and link digital objects. This can be a link entered in column W, or the filename of a file placed in the `dao` directory.
 	* ![](screenshots/screenshot5.png)
 3. Save the spreadsheet to the `input` directory
-4. Run `asinventory upload`, `asupload`, or `python asUpload.py`
+4. Run `asinventory upload`, `asupload`, or `python asUpload.py` — this validates the spreadsheet first and only proceeds with the upload if no validation errors are found
 5. The spreadsheet file will be moved into the `complete` directory after the upload is completed. **WARNING: files with the same name in this directory will be overwritten.**
 
 Example with folder overrides:

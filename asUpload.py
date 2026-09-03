@@ -12,10 +12,11 @@ import aspace_templates
 import aspace_helpers as helpers
 import ua_locations
 from asValidate import run_validate
-from asinventory_runtime import build_runtime_paths, ensure_runtime_directories, load_repository_id
+from asinventory_runtime import build_runtime_paths, ensure_runtime_directories, load_repository_id, resolve_interactive
 
 
 def run_upload(base_dir=None, input_path=None, output_path=None, complete_path=None, dao_path=None, interactive=True):
+    interactive = resolve_interactive(interactive)
     paths = build_runtime_paths(base_dir, input_path, output_path, complete_path, dao_path)
     ensure_runtime_directories(paths)
     repository = load_repository_id()
@@ -40,21 +41,21 @@ def run_upload(base_dir=None, input_path=None, output_path=None, complete_path=N
                 spreadsheetCount += 1
                 spreadsheet = os.path.join(paths.input_path, spreadFile)
                 print ("Reading " + spreadFile)
+                refID = os.path.splitext(spreadFile)[0].strip()
+                resourceLevel = len(refID) != 32
                 wb = openpyxl.load_workbook(filename=spreadsheet, read_only=True)
                 boxSession = {}
 
                 for sheet in wb.worksheets:
                     checkSwitch = True
                     try:
-                        if sheet["H1"].value.lower().strip() != "title":
+                        if sheet["A1"].value.lower().strip() != "id":
                             checkSwitch = False
-                        elif sheet["H2"].value.lower().strip() != "level":
+                        elif sheet["I1"].value.lower().strip() != "title":
                             checkSwitch = False
-                        elif sheet["H3"].value.lower().strip() != "ref id":
+                        elif sheet["J1"].value.lower().strip() != "date 1 display":
                             checkSwitch = False
-                        elif sheet["J6"].value.lower().strip() != "date 1 display":
-                            checkSwitch = False
-                        elif sheet["D6"].value.lower().strip() != "container uri":
+                        elif sheet["D1"].value.lower().strip() != "container uri":
                             checkSwitch = False
                     except:
                         print ("ERROR: incorrect sheet " + sheet.title + " in file " + spreadFile)
@@ -64,28 +65,22 @@ def run_upload(base_dir=None, input_path=None, output_path=None, complete_path=N
                     else:
                         print ("Reading sheet: " + sheet.title)
 
-                        displayName = sheet["I1"].value
-                        level = sheet["I2"].value
-                        refID = sheet["I3"].value
-
                         try:
                             client = ASnakeClient()
                             client.authorize()
                         except:
                             raise ValueError("ERROR: ArchivesSpace login failed. Please check archivessnake configuration")
 
-                        if level.lower().strip() == "resource":
-                            resourceLevel = True
-                            print ("Looking for resource matching " + str(displayName) + "...")
+                        if resourceLevel:
+                            print ("Looking for resource matching " + refID + "...")
                             object = helpers.get_resource_by_id(client, repository, refID)
                             if object is None:
                                 raise ValueError(f"Could not find resource with ID: {refID}")
                             resourceURI = object['uri']
                             print ("Found " + object['title'])
                         else:
-                            resourceLevel = False
                             try:
-                                print ("Looking for archival object matching " + str(displayName) + "...")
+                                print ("Looking for archival object matching " + refID + "...")
                             except:
                                 print ("Looking for archival object matching [non-ascii component name]...")
                             object = helpers.get_archival_object_by_ref_id(client, repository, refID)
@@ -107,8 +102,8 @@ def run_upload(base_dir=None, input_path=None, output_path=None, complete_path=N
                         rowCount = 0
                         for row in sheet.rows:
                             rowCount = rowCount + 1
-                            if rowCount > 6:
-                                fileCount = rowCount - 6
+                            if rowCount > 1:
+                                fileCount = rowCount - 1
                                 itemCount = fileCount + childCount
 
                                 if not row[8].value is None:

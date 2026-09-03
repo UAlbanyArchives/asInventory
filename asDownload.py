@@ -8,7 +8,7 @@ import traceback
 import openpyxl
 from asnake.client import ASnakeClient
 
-from asinventory_runtime import build_runtime_paths, ensure_runtime_directories, load_repository_id
+from asinventory_runtime import build_runtime_paths, ensure_runtime_directories, load_repository_id, resolve_interactive
 
 
 def safe_filename(s):
@@ -92,6 +92,7 @@ def get_children_waypoint(client, resource_uri, node_uri=None):
 
 
 def run_download(base_dir=None, input_path=None, output_path=None, complete_path=None, dao_path=None, interactive=True):
+    interactive = resolve_interactive(interactive)
     paths = build_runtime_paths(base_dir, input_path, output_path, complete_path, dao_path)
     ensure_runtime_directories(paths)
 
@@ -117,39 +118,29 @@ def run_download(base_dir=None, input_path=None, output_path=None, complete_path
             objectID = object['ref_id']
 
         worksheet = wb.active
-        worksheet["H1"] = "Title"
-        worksheet["I1"] = displayTitle
-        worksheet["H2"] = "Level"
-        if resourceLevel == True:
-            worksheet["I2"] = "resource"
-        else:
-            worksheet["I2"] = "archival object"
-        worksheet["H3"] = "Ref ID"
-        worksheet["I3"] = objectID
-
-        worksheet["A6"] = "ID"
-        worksheet["B6"] = "Location ID"
-        worksheet["C6"] = "Location"
-        worksheet["D6"] = "Container URI"
-        worksheet["E6"] = "Container"
-        worksheet["F6"] = "C#"
-        worksheet["G6"] = "Folder"
-        worksheet["H6"] = "F#"
-        worksheet["I6"] = "Title"
-        worksheet["J6"] = "Date 1 Display"
-        worksheet["K6"] = "Date 1 Normal"
-        worksheet["L6"] = "Date 2 Display"
-        worksheet["M6"] = "Date 2 Normal"
-        worksheet["N6"] = "Date 3 Display"
-        worksheet["O6"] = "Date 3 Normal"
-        worksheet["P6"] = "Date 4 Display"
-        worksheet["Q6"] = "Date 4 Normal"
-        worksheet["R6"] = "Date 5 Display"
-        worksheet["S6"] = "Date 5 Normal"
-        worksheet["T6"] = "Restrictions"
-        worksheet["U6"] = "General Note"
-        worksheet["V6"] = "Scope"
-        worksheet["W6"] = "DAO Filename"
+        worksheet["A1"] = "ID"
+        worksheet["B1"] = "Location ID"
+        worksheet["C1"] = "Location"
+        worksheet["D1"] = "Container URI"
+        worksheet["E1"] = "Container"
+        worksheet["F1"] = "C#"
+        worksheet["G1"] = "Folder"
+        worksheet["H1"] = "F#"
+        worksheet["I1"] = "Title"
+        worksheet["J1"] = "Date 1 Display"
+        worksheet["K1"] = "Date 1 Normal"
+        worksheet["L1"] = "Date 2 Display"
+        worksheet["M1"] = "Date 2 Normal"
+        worksheet["N1"] = "Date 3 Display"
+        worksheet["O1"] = "Date 3 Normal"
+        worksheet["P1"] = "Date 4 Display"
+        worksheet["Q1"] = "Date 4 Normal"
+        worksheet["R1"] = "Date 5 Display"
+        worksheet["S1"] = "Date 5 Normal"
+        worksheet["T1"] = "Restrictions"
+        worksheet["U1"] = "General Note"
+        worksheet["V1"] = "Scope"
+        worksheet["W1"] = "DAO Filename"
 
         tableStyle = openpyxl.worksheet.table.TableStyleInfo(name='TableStyleMedium2', showRowStripes=True)
 
@@ -159,7 +150,7 @@ def run_download(base_dir=None, input_path=None, output_path=None, complete_path
             resource_uri = object['resource']['ref']
             childrenList = get_children_waypoint(client, resource_uri, object['uri'])
 
-        lineCount = 6
+        lineCount = 1
         for child in childrenList:
             childObject = client.get(child['record_uri']).json()
             lineCount = lineCount + 1
@@ -261,21 +252,17 @@ def run_download(base_dir=None, input_path=None, output_path=None, complete_path
                         else:
                             worksheet["V" + str(lineCount)] = subnote['content']
 
-        print ("Writing spreadsheet " + simpleTitle + ".xlsx to " + paths.output_path)
+        print ("Writing spreadsheet " + objectID + ".xlsx to " + paths.output_path)
 
-        table = openpyxl.worksheet.table.Table(ref='A6:W' + str(lineCount), displayName='Inventory', tableStyleInfo=tableStyle)
+        table = openpyxl.worksheet.table.Table(ref='A1:W' + str(lineCount), displayName='Inventory', tableStyleInfo=tableStyle)
         worksheet.add_table(table)
-
-        worksheet["H1"].style = "Accent1"
-        worksheet["H2"].style = "Accent1"
-        worksheet["H3"].style = "Accent1"
 
         worksheet.column_dimensions["I"].width = 60.0
         worksheet.column_dimensions["F"].width = 15.0
         worksheet.column_dimensions["J"].width = 15.0
         worksheet.column_dimensions["K"].width = 15.0
 
-        wb.save(filename = os.path.join(paths.output_path, simpleTitle + ".xlsx"))
+        wb.save(filename = os.path.join(paths.output_path, safe_filename(objectID) + ".xlsx"))
         print ("Export Successful.\n\nSuccessfully exported archival object from ArchivesSpace to spreadsheet at " + paths.output_path + ".")
 
         if interactive:

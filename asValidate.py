@@ -4,7 +4,7 @@ import sys
 import openpyxl
 
 import aspace_helpers as helpers
-from asinventory_runtime import build_runtime_paths, ensure_runtime_directories
+from asinventory_runtime import build_runtime_paths, ensure_runtime_directories, resolve_interactive
 
 
 daoFileList = []
@@ -113,6 +113,7 @@ def dateCheck(date, errorCount, lineCount, title):
 
 
 def run_validate(base_dir=None, input_path=None, output_path=None, complete_path=None, dao_path=None, interactive=True):
+    interactive = resolve_interactive(interactive)
     paths = build_runtime_paths(base_dir, input_path, output_path, complete_path, dao_path)
     ensure_runtime_directories(paths)
     daoFileList.clear()
@@ -121,27 +122,26 @@ def run_validate(base_dir=None, input_path=None, output_path=None, complete_path
     for file in os.listdir(paths.input_path):
         if file.endswith(".xlsx"):
             filePath = os.path.join(paths.input_path, file)
+            refID = os.path.splitext(file)[0].strip()
             wb = openpyxl.load_workbook(filename=filePath, read_only=True)
 
             for sheet in wb.worksheets:
                 checkSwitch = True
                 try:
-                    if sheet["H1"].value.lower().strip() != "title":
+                    if sheet["A1"].value.lower().strip() != "id":
                         checkSwitch = False
-                    elif sheet["H2"].value.lower().strip() != "level":
+                    elif sheet["I1"].value.lower().strip() != "title":
                         checkSwitch = False
-                    elif sheet["H3"].value.lower().strip() != "ref id":
+                    elif sheet["J1"].value.lower().strip() != "date 1 display":
                         checkSwitch = False
-                    elif sheet["J6"].value.lower().strip() != "date 1 display":
-                        checkSwitch = False
-                    elif sheet["D6"].value.lower().strip() != "container uri":
+                    elif sheet["D1"].value.lower().strip() != "container uri":
                         checkSwitch = False
                 except:
                     print ("ERROR: incorrect sheet " + sheet.title + " in file " + file)
                     totalErrorCount += 1
 
-                if sheet["I3"].value is None or len(sheet["I3"].value.strip()) != 32:
-                    print (f"ERROR: incorrect sheet {sheet.title} in file {file} - missing or invalid UUID {sheet["I3"].value}")
+                if len(refID) < 1:
+                    print (f"ERROR: incorrect filename {file} - missing or invalid ID")
                     totalErrorCount += 1
 
                 if checkSwitch == False:
@@ -153,7 +153,7 @@ def run_validate(base_dir=None, input_path=None, output_path=None, complete_path
                     errorCount = 0
                     for row in sheet.rows:
                         lineCount += 1
-                        if lineCount > 6:
+                        if lineCount > 1:
                             # Container name check
                             for index in [4, 6]:
                                 if row[index].value and len(row[index].value.strip()) > 0:
