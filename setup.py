@@ -24,12 +24,14 @@ setup(
     version=version,
     author="UAlbany Archives",
     author_email="",
-    description="Manage file-level ArchivesSpace inventories with spreadsheets",
+    description="How UAlbany manages file-level ArchivesSpace inventories with spreadsheets",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/UAlbanyArchives/asInventory",
     packages=find_packages(),
     py_modules=[
+        "asinventory_cli",
+        "asinventory_runtime",
         "asDownload",
         "asUpload",
         "asValidate",
@@ -41,6 +43,7 @@ setup(
     install_requires=requirements,
     entry_points={
         "console_scripts": [
+            "asinventory=asinventory_cli:main",
             "asdownload=asDownload:main",
             "asupload=asUpload:main",
             "asvalidate=asValidate:main",

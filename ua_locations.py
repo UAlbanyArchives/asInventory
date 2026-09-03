@@ -3,6 +3,13 @@ University Archives location utilities.
 Handles conversion of local location coordinate systems to ArchivesSpace location records.
 """
 
+
+def _norm(value):
+    """Normalize a value for case-insensitive comparisons."""
+    if value is None:
+        return ""
+    return str(value).strip().lower()
+
 def main_shelf(coordinates):
     """Parse main storage shelf coordinates"""
     coord_list = {
@@ -20,32 +27,44 @@ def main_shelf(coordinates):
         "Note": ""
     }
     
-    if len(coordinates.split("-")) != 4:
+    parts = [part.strip() for part in coordinates.split("-")]
+
+    if len(parts) == 2:
+        # 2-part shorthand like "CCBE-105B"
+        room = parts[0]
+        row = parts[1]
+        coord_list["Building"] = "Science Library"
+        coord_list["Floor"] = "LL"
+        coord_list["Room"] = room
+        coord_list["Label1"] = "Row"
+        coord_list["Place1"] = row
+        coord_list["Title"] = f"Science Library, LL, {room} [Row: {row}]"
+    elif len(parts) != 4:
         print(f"Error, shelf is in main storage, but is incorrect: {coordinates}")
     else:
         if coordinates.lower().strip().startswith("sb17"):
             coord_list["Building"] = "Main Library"
             coord_list["Floor"] = "Basement"
             coord_list["Room"] = "SB17"
-            coord_list["Title"] = f"Main Library, Basement, SB17 [Row: {coordinates.split('-')[1]}, Bay: {coordinates.split('-')[2]}, Shelf: {coordinates.split('-')[3]}]"
+            coord_list["Title"] = f"Main Library, Basement, SB17 [Row: {parts[1]}, Bay: {parts[2]}, Shelf: {parts[3]}]"
         elif coordinates.lower().strip().startswith("sb14"):
             coord_list["Building"] = "Main Library"
             coord_list["Floor"] = "Basement"
             coord_list["Room"] = "SB14"
-            coord_list["Title"] = f"Main Library, Basement, SB14 [Row: {coordinates.split('-')[1]}, Bay: {coordinates.split('-')[2]}, Shelf: {coordinates.split('-')[3]}]"
+            coord_list["Title"] = f"Main Library, Basement, SB14 [Row: {parts[1]}, Bay: {parts[2]}, Shelf: {parts[3]}]"
         else:
             coord_list["Building"] = "Science Library"
             coord_list["Floor"] = "3"
             coord_list["Room"] = "Main Storage"
-            coord_list["Area"] = coordinates.split("-")[0]
-            coord_list["Title"] = f"Science Library, 3, Main Storage, {coordinates.split('-')[0]} [Row: {coordinates.split('-')[1]}, Bay: {coordinates.split('-')[2]}, Shelf: {coordinates.split('-')[3]}]"
+            coord_list["Area"] = parts[0]
+            coord_list["Title"] = f"Science Library, 3, Main Storage, {parts[0]} [Row: {parts[1]}, Bay: {parts[2]}, Shelf: {parts[3]}]"
             
         coord_list["Label1"] = "Row"
-        coord_list["Place1"] = coordinates.split("-")[1]
+        coord_list["Place1"] = parts[1]
         coord_list["Label2"] = "Bay"
-        coord_list["Place2"] = coordinates.split("-")[2]
+        coord_list["Place2"] = parts[2]
         coord_list["Label3"] = "Shelf"
-        coord_list["Place3"] = coordinates.split("-")[3]
+        coord_list["Place3"] = parts[3]
         
     return coord_list
 
@@ -120,21 +139,74 @@ def location_to_aspace(coordinates, note=None):
         return (coord_list, False)
 
 
-def find_location_uri(client, loc_title):
+def find_location_uri(client, loc_title, loc_data=None):
     """
     Search for a location by title and return its URI.
     """
     try:
-        search_results = client.get('/search', params={
-            'page': '1',
-            'page_size': '100',
-            'q': f'"{loc_title}"'
-        }).json()
-        
-        for result in search_results.get('results', []):
-            if result.get('title', '').strip().lower() == loc_title.strip().lower():
-                return result.get('uri')
-        
+        if loc_title and len(str(loc_title).strip()) > 0:
+            search_results = client.get('/search', params={
+                'page': '1',
+                'page_size': '100',
+                'q': f'"{loc_title}"'
+            }).json()
+
+            for result in search_results.get('results', []):
+                if _norm(result.get('title', '')) == _norm(loc_title):
+                    return result.get('uri')
+
+        # Fallback for titles that don't exactly align with local shorthand:
+        # match by explicit location fields (building/floor/room/row).
+        if isinstance(loc_data, dict):
+            required_pairs = [
+                ('building', 'Building'),
+                ('floor', 'Floor'),
+                ('room', 'Room'),
+                ('coordinate_1_label', 'Label1'),
+                ('coordinate_1_indicator', 'Place1')
+            ]
+            optional_pairs = [
+                ('area', 'Area'),
+                ('coordinate_2_label', 'Label2'),
+                ('coordinate_2_indicator', 'Place2'),
+                ('coordinate_3_label', 'Label3'),
+                ('coordinate_3_indicator', 'Place3')
+            ]
+
+            has_required = all(_norm(loc_data.get(local_key)) != "" for _, local_key in required_pairs)
+            if has_required:
+                ids_response = client.get('/locations', params={'all_ids': 'true'}).json()
+
+                location_ids = []
+                if isinstance(ids_response, list):
+                    location_ids = ids_response
+                elif isinstance(ids_response, dict):
+                    if isinstance(ids_response.get('id_set'), list):
+                        location_ids = ids_response.get('id_set', [])
+                    elif isinstance(ids_response.get('results'), list):
+                        for result in ids_response.get('results', []):
+                            if isinstance(result, dict) and 'id' in result:
+                                location_ids.append(result['id'])
+
+                for loc_id in location_ids:
+                    location_obj = client.get(f'/locations/{loc_id}').json()
+
+                    matches_required = all(
+                        _norm(location_obj.get(remote_key)) == _norm(loc_data.get(local_key))
+                        for remote_key, local_key in required_pairs
+                    )
+                    if not matches_required:
+                        continue
+
+                    matches_optional = True
+                    for remote_key, local_key in optional_pairs:
+                        if _norm(loc_data.get(local_key)) != "" and _norm(location_obj.get(remote_key)) != _norm(loc_data.get(local_key)):
+                            matches_optional = False
+                            break
+
+                    if matches_optional:
+                        return location_obj.get('uri')
+
         print(f"WARNING: Could not find location: {loc_title}")
         return None
     except Exception as e:

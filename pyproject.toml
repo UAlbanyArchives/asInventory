@@ -19,12 +19,13 @@ Repository = "https://github.com/UAlbanyArchives/asInventory"
 Issues = "https://github.com/UAlbanyArchives/asInventory/issues"
 
 [project.scripts]
+asinventory = "asinventory_cli:main"
 asdownload = "asDownload:main"
 asupload = "asUpload:main"
 asvalidate = "asValidate:main"
 
 [tool.setuptools]
-py-modules = ["asDownload", "asUpload", "asValidate", "aspace_helpers", "aspace_templates", "ua_locations", "daoList", "dateList", "testLength"]
+py-modules = ["asinventory_cli", "asinventory_runtime", "asDownload", "asUpload", "asValidate", "aspace_helpers", "aspace_templates", "ua_locations"]
 
 [tool.setuptools.dynamic]
 version = {attr = "__init__.__version__"}

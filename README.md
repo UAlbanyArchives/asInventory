@@ -5,7 +5,7 @@ Version 2.0 now uses [archivessnake](https://github.com/archivesspace-labs/Archi
 
 ### Warning note
 
-This tool has been tested with ArchivesSpace 2.x and 3.x. It makes iterative changes through the API. You should always do significant testing on a development instance of ASpace before using it on production data to make sure it acts as you expect.
+This tool has been tested with ArchivesSpace 2.x-4.x. It makes iterative changes through the API. You should always do significant testing on a development instance of ASpace before using it on production data to make sure it acts as you expect.
 
 ## Installation
 
@@ -41,15 +41,23 @@ username: your_username
 password: your_password
 ```
 
-### Repository Configuration (Optional)
+Repository selection is currently fixed to repository `2` by default.
 
-Create `~/asinventory.yml` to specify your repository ID:
+### Base Directory
 
-```yaml
-repository: 2
+By default, `input`, `output`, `complete`, `dao`, and `error.log` are located relative to the installed package directory (or the EXE location when frozen), which is often not where you want them when installed via pip.
+
+Set the `ASINVENTORY_BASE_DIR` environment variable to override this default and point the tools at a working directory of your choice:
+
+```bash
+# Windows (PowerShell)
+$env:ASINVENTORY_BASE_DIR = "C:\work\asinventory"
+
+# macOS/Linux
+export ASINVENTORY_BASE_DIR=/path/to/asinventory
 ```
 
-If this file doesn't exist, the default repository ID of "2" will be used.
+The `--base-dir` CLI argument, when provided, takes precedence over `ASINVENTORY_BASE_DIR`.
 
 ## Required Directories
 
@@ -63,23 +71,54 @@ dao
 
 ## Running the Scripts
 
-After installation, run scripts as console commands or directly with Python:
+After installation, you can use either the new unified CLI or the existing script entry files.
+
+### CLI
 
 ```bash
-# As console commands (if Python Scripts directory is in PATH)
+asinventory upload
+asinventory download
+asinventory validate
+```
+
+Optional path overrides are available for folders that otherwise default relative to the script or EXE location:
+
+```bash
+asinventory upload --input C:\work\input --complete C:\work\complete --dao C:\work\dao
+asinventory download --output C:\work\output
+asinventory validate --input C:\work\input --dao C:\work\dao
+```
+
+If override arguments are omitted, the tools continue to use these default relative folders next to the script or built EXE:
+
+```text
+input
+output
+complete
+dao
+```
+
+### Existing script and EXE workflow
+
+The original entry files remain supported for direct execution, double-clicked EXEs, and manual PyInstaller builds.
+
+Run scripts as console commands or directly with Python:
+
+```bash
+# Legacy console commands / optional aliases
 asdownload
 asupload
 asvalidate
 
-# Or run directly with Python
+# Direct Python scripts
 python asDownload.py
 python asUpload.py
-python validate.py
+python asValidate.py
 ```
 
 ### Exporting an inventory
 
-1. Run `asdownload` (or `python asDownload.py`)
+1. Run `asinventory download`, `asdownload`, or `python asDownload.py`
 2. Select the level to export:
 	* Select "Resource" (r) to export a folder list from a collection that has no series
 	* Select "Archival Object" (ao) to export a folder list from a series, subseries, or other component
@@ -91,6 +130,12 @@ python validate.py
 4. Click "OK" and a list of files exported will print to the console. This may take some time for large file listings.
 5. If the export is successful, you will be given the option to open the output directory to view the exported file
 6. A new Spreadsheet file will be placed in the `output` directory. **WARNING: files with the same name in this directory will be overwritten.**
+
+Example with an output override:
+
+```bash
+asinventory download --output C:\work\output
+```
 
 #### To import an inventory
 
@@ -107,11 +152,17 @@ python validate.py
 	* Accepts up to 5 dates using ISO format (e.g., "1977/1988" or "1903-03-17/1917-01-15")
 	* Display dates are optional and are entered in the ASpace Expression field
 	* Can make Access Restriction (column T), General Note (column U), and Scope (column V) notes.
-	* Can create and link digital objects. This can be a link entered in column W, or the filename of a file placed in the `dao` directory. If dao paths are set up correctly in `local_settings.cfg` asInventory will also rename files to their newly created ASpace IDs and move them to a webserver.
+	* Can create and link digital objects. This can be a link entered in column W, or the filename of a file placed in the `dao` directory.
 	* ![](screenshots/screenshot5.png)
 3. Save the spreadsheet to the `input` directory
-4. Run `asupload` (or `python asUpload.py`)
+4. Run `asinventory upload`, `asupload`, or `python asUpload.py`
 5. The spreadsheet file will be moved into the `complete` directory after the upload is completed. **WARNING: files with the same name in this directory will be overwritten.**
+
+Example with folder overrides:
+
+```bash
+asinventory upload --input C:\work\input --complete C:\work\complete --dao C:\work\dao
+```
 
 ## Dependencies
 
@@ -126,11 +177,13 @@ Dependencies are automatically installed with pip:
 
 ### Validation
 
-`asvalidate` (or `python validate.py`) will validate all dates entered in all spreadsheets in the `input` folder. This helps ensure they're compatible with ArchivesSpace to reduce errors during upload.
+`asinventory validate`, `asvalidate`, or `python asValidate.py` will validate all dates entered in all spreadsheets in the `input` folder. This helps ensure they're compatible with ArchivesSpace to reduce errors during upload.
 
-### Creating digital objects
+Example with an input override:
 
-Digital objects can be created by entering URLs in column W of the upload spreadsheet. The tool will create ArchivesSpace digital object records and link them to the appropriate archival objects.
+```bash
+asinventory validate --input C:\work\input
+```
 
 ## Building Executables (Optional)
 
@@ -139,8 +192,10 @@ Executables can be built with PyInstaller:
 ```bash
 pyinstaller --onefile asUpload.py
 pyinstaller --onefile asDownload.py
-pyinstaller --onefile validate.py
+pyinstaller --onefile asValidate.py
 ```
+
+The existing `.spec` files can continue to be used as-is because the original entry scripts were preserved.
 
 ## Contributing
 
