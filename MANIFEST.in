@@ -1,0 +1,4 @@
+global-exclude *.exe
+prune build
+prune dist
+prune screenshots
