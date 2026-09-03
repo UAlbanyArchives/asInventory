@@ -59,20 +59,6 @@ export ASINVENTORY_BASE_DIR=/path/to/asinventory
 
 The `--base-dir` CLI argument, when provided, takes precedence over `ASINVENTORY_BASE_DIR`.
 
-### Disabling Interactive Prompts
-
-`asdownload`, `asupload`, and `asvalidate` prompt for input (e.g. "Press Enter to continue...") by default when run directly. Set `ASINVENTORY_INTERACTIVE` to `0`, `false`, `no`, or `off` to suppress these prompts without passing `--interactive` flags:
-
-```bash
-# Windows (PowerShell)
-$env:ASINVENTORY_INTERACTIVE = "0"
-
-# macOS/Linux
-export ASINVENTORY_INTERACTIVE=0
-```
-
-The `asinventory` unified CLI already runs non-interactively and is unaffected by this variable.
-
 ## Required Directories
 
 asInventory requires these directories (will be created automatically when scripts run):
@@ -91,15 +77,17 @@ After installation, you can use either the new unified CLI or the existing scrip
 
 ```bash
 asinventory upload
-asinventory download
+asinventory download <id>
 asinventory validate
 ```
+
+`asinventory download` requires the resource `id_0` or archival object `ref_id` as a positional argument since it always runs non-interactively; a 32-character ID is treated as an archival object, anything else as a resource.
 
 Optional path overrides are available for folders that otherwise default relative to the script or EXE location:
 
 ```bash
 asinventory upload --input C:\work\input --complete C:\work\complete --dao C:\work\dao
-asinventory download --output C:\work\output
+asinventory download apap185 --output C:\work\output
 asinventory validate --input C:\work\input --dao C:\work\dao
 ```
 
@@ -132,7 +120,9 @@ python asValidate.py
 
 ### Exporting an inventory
 
-1. Run `asinventory download`, `asdownload`, or `python asDownload.py`
+Running `asdownload` or `python asDownload.py` with no arguments prompts interactively for the level and ID:
+
+1. Run `asdownload` or `python asDownload.py`
 2. Select the level to export:
 	* Select "Resource" (r) to export a folder list from a collection that has no series
 	* Select "Archival Object" (ao) to export a folder list from a series, subseries, or other component
@@ -142,6 +132,13 @@ python asValidate.py
 	* For other components use Ref ID
 	![](screenshots/screenshot3.png)
 4. Click "OK" and a list of files exported will print to the console. This may take some time for large file listings.
+
+Alternatively, pass the ID directly to skip the prompts entirely (used by `asinventory download` and non-interactive scripting):
+
+```bash
+asdownload apap185
+python asDownload.py apap185
+```
 5. If the export is successful, you will be given the option to open the output directory to view the exported file
 6. A new spreadsheet file, named after the record's ID (e.g., `<id_0>.xlsx` or `<ref_id>.xlsx`), will be placed in the `output` directory. **WARNING: files with the same name in this directory will be overwritten.**
 

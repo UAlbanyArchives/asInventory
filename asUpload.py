@@ -12,11 +12,10 @@ import aspace_templates
 import aspace_helpers as helpers
 import ua_locations
 from asValidate import run_validate
-from asinventory_runtime import build_runtime_paths, ensure_runtime_directories, load_repository_id, resolve_interactive
+from asinventory_runtime import build_runtime_paths, ensure_runtime_directories, load_repository_id
 
 
 def run_upload(base_dir=None, input_path=None, output_path=None, complete_path=None, dao_path=None, interactive=True):
-    interactive = resolve_interactive(interactive)
     paths = build_runtime_paths(base_dir, input_path, output_path, complete_path, dao_path)
     ensure_runtime_directories(paths)
     repository = load_repository_id()

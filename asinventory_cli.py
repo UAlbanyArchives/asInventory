@@ -21,6 +21,7 @@ def build_parser() -> argparse.ArgumentParser:
     upload_parser.set_defaults(handler=run_upload)
 
     download_parser = subparsers.add_parser('download', help='Download an inventory spreadsheet from ArchivesSpace.')
+    download_parser.add_argument('record_id', nargs='?', help='Resource id_0 or archival object ref_id to export.')
     add_shared_paths(download_parser)
     download_parser.set_defaults(handler=run_download)
 
@@ -34,7 +35,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv=None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    return args.handler(
+    kwargs = dict(
         base_dir=args.base_dir,
         input_path=args.input_path,
         output_path=args.output_path,
@@ -42,6 +43,9 @@ def main(argv=None) -> int:
         dao_path=args.dao_path,
         interactive=False,
     )
+    if hasattr(args, 'record_id'):
+        kwargs['record_id'] = args.record_id
+    return args.handler(**kwargs)
 
 
 if __name__ == '__main__':

@@ -4,7 +4,7 @@ import sys
 import openpyxl
 
 import aspace_helpers as helpers
-from asinventory_runtime import build_runtime_paths, ensure_runtime_directories, resolve_interactive
+from asinventory_runtime import build_runtime_paths, ensure_runtime_directories
 
 
 daoFileList = []
@@ -113,7 +113,6 @@ def dateCheck(date, errorCount, lineCount, title):
 
 
 def run_validate(base_dir=None, input_path=None, output_path=None, complete_path=None, dao_path=None, interactive=True):
-    interactive = resolve_interactive(interactive)
     paths = build_runtime_paths(base_dir, input_path, output_path, complete_path, dao_path)
     ensure_runtime_directories(paths)
     daoFileList.clear()

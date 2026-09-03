@@ -8,11 +8,36 @@ import traceback
 import openpyxl
 from asnake.client import ASnakeClient
 
-from asinventory_runtime import build_runtime_paths, ensure_runtime_directories, load_repository_id, resolve_interactive
+from asinventory_runtime import build_runtime_paths, ensure_runtime_directories, load_repository_id
 
 
 def safe_filename(s):
     return re.sub(r'[<>:"/\\|?*\x00-\x1F]', '_', s).strip().rstrip('.')
+
+
+def get_object_by_record_id(client, repository, record_id):
+    # Non-interactive lookup: a 32-char ID is an archival object ref_id, otherwise a resource id_0.
+    resourceLevel = len(record_id) != 32
+    try:
+        if resourceLevel:
+            aq = json.dumps({"query": {"field": "identifier", "value": record_id, "jsonmodel_type": "field_query"}})
+            search_results = client.get('repositories/{}/search'.format(repository), params={'page': '1', 'aq': aq}).json()
+            object = client.get(search_results['results'][0]['uri']).json() if search_results.get('total_hits', 0) > 0 else None
+        else:
+            ao_result = client.get('repositories/{}/find_by_id/archival_objects'.format(repository), params={'ref_id[]': record_id}).json()
+            object = client.get(ao_result['archival_objects'][0]['ref']).json() if ao_result.get('archival_objects') else None
+    except:
+        object = None
+
+    if object is None:
+        raise ValueError(f"Could not find {'resource' if resourceLevel else 'archival object'} with ID: {record_id}")
+
+    if resourceLevel:
+        displayTitle = object['title'].replace("/", "-")
+    else:
+        displayTitle = object.get('display_string', object.get('title', ''))
+
+    return object, displayTitle, resourceLevel
 
 
 def getInput(object, displayTitle, resourceLevel, client, repository):
@@ -91,8 +116,7 @@ def get_children_waypoint(client, resource_uri, node_uri=None):
     return children
 
 
-def run_download(base_dir=None, input_path=None, output_path=None, complete_path=None, dao_path=None, interactive=True):
-    interactive = resolve_interactive(interactive)
+def run_download(base_dir=None, input_path=None, output_path=None, complete_path=None, dao_path=None, interactive=True, record_id=None):
     paths = build_runtime_paths(base_dir, input_path, output_path, complete_path, dao_path)
     ensure_runtime_directories(paths)
 
@@ -106,7 +130,12 @@ def run_download(base_dir=None, input_path=None, output_path=None, complete_path
     repository = load_repository_id()
 
     try:
-        object, displayTitle, resourceLevel = getInput(None, "", False, client, repository)
+        if record_id:
+            object, displayTitle, resourceLevel = get_object_by_record_id(client, repository, record_id)
+        elif interactive:
+            object, displayTitle, resourceLevel = getInput(None, "", False, client, repository)
+        else:
+            raise ValueError("record_id is required when interactive is False.")
         wb = openpyxl.Workbook()
 
         simpleTitle = safe_filename(object['title'].replace("/", "-"))
@@ -288,7 +317,8 @@ def run_download(base_dir=None, input_path=None, output_path=None, complete_path
 
 
 def main():
-    return run_download()
+    record_id = sys.argv[1] if len(sys.argv) > 1 else None
+    return run_download(record_id=record_id, interactive=(record_id is None))
 
 
 if __name__ == "__main__":
