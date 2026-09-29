@@ -371,9 +371,9 @@ def run_upload(base_dir=None, input_path=None, output_path=None, complete_path=N
                 wb._archive.close()
                 print ("Moving " + spreadFile + " to complete directory...")
                 if os.path.isfile(os.path.join(paths.complete_path, spreadFile)):
-                    shutil.copy2(os.path.join(paths.input_path, spreadFile), os.path.join(paths.complete_path, os.path.splitext(spreadFile)[0] + str(datetime.datetime.now()).split(".")[0].replace(":", "_") + ".xlsx"))
+                    shutil.move(os.path.join(paths.input_path, spreadFile), os.path.join(paths.complete_path, os.path.splitext(spreadFile)[0] + str(datetime.datetime.now()).split(".")[0].replace(":", "_") + ".xlsx"))
                 else:
-                    shutil.copy2(os.path.join(paths.input_path, spreadFile), paths.complete_path)
+                    shutil.move(os.path.join(paths.input_path, spreadFile), paths.complete_path)
             else:
                 print ("ERROR: incorrect file " + spreadFile + " in input path.")
 
