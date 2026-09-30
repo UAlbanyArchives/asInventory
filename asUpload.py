@@ -15,13 +15,13 @@ from asValidate import run_validate
 from asinventory_runtime import build_runtime_paths, ensure_runtime_directories, load_repository_id
 
 
-def run_upload(base_dir=None, input_path=None, output_path=None, complete_path=None, dao_path=None, interactive=True):
+def run_upload(base_dir=None, input_path=None, output_path=None, complete_path=None, dao_path=None, interactive=True, file_path=None):
     paths = build_runtime_paths(base_dir, input_path, output_path, complete_path, dao_path)
     ensure_runtime_directories(paths)
     repository = load_repository_id()
 
     print ("Validating input directory before upload...")
-    validationErrorCount = run_validate(base_dir=base_dir, input_path=input_path, output_path=output_path, complete_path=complete_path, dao_path=dao_path, interactive=False)
+    validationErrorCount = run_validate(base_dir=base_dir, input_path=input_path, output_path=output_path, complete_path=complete_path, dao_path=dao_path, file_path=file_path, interactive=False)
     if validationErrorCount > 0:
         print (f"Validation found {validationErrorCount} error(s). Fix these issues and re-run validation before uploading.")
         if interactive:
@@ -35,10 +35,14 @@ def run_upload(base_dir=None, input_path=None, output_path=None, complete_path=N
     try:
         print ("Reading input directory...")
         spreadsheetCount = 0
-        for spreadFile in os.listdir(paths.input_path):
+        spreadsheets = [os.path.abspath(file_path)] if file_path else [
+            os.path.join(paths.input_path, file) for file in os.listdir(paths.input_path)
+            if file.endswith(".xlsx")
+        ]
+        for spreadsheet in spreadsheets:
+            spreadFile = os.path.basename(spreadsheet)
             if spreadFile.endswith(".xlsx"):
                 spreadsheetCount += 1
-                spreadsheet = os.path.join(paths.input_path, spreadFile)
                 print ("Reading " + spreadFile)
                 refID = os.path.splitext(spreadFile)[0].strip()
                 resourceLevel = len(refID) != 32
@@ -371,9 +375,9 @@ def run_upload(base_dir=None, input_path=None, output_path=None, complete_path=N
                 wb._archive.close()
                 print ("Moving " + spreadFile + " to complete directory...")
                 if os.path.isfile(os.path.join(paths.complete_path, spreadFile)):
-                    shutil.move(os.path.join(paths.input_path, spreadFile), os.path.join(paths.complete_path, os.path.splitext(spreadFile)[0] + str(datetime.datetime.now()).split(".")[0].replace(":", "_") + ".xlsx"))
+                    shutil.move(spreadsheet, os.path.join(paths.complete_path, os.path.splitext(spreadFile)[0] + str(datetime.datetime.now()).split(".")[0].replace(":", "_") + ".xlsx"))
                 else:
-                    shutil.move(os.path.join(paths.input_path, spreadFile), paths.complete_path)
+                    shutil.move(spreadsheet, paths.complete_path)
             else:
                 print ("ERROR: incorrect file " + spreadFile + " in input path.")
 

@@ -172,6 +172,12 @@ Example with folder overrides:
 asinventory upload --input C:\work\input --complete C:\work\complete --dao C:\work\dao
 ```
 
+To upload only one spreadsheet, use `--file`. The selected spreadsheet is validated and then moved to the complete directory after upload:
+
+```bash
+asinventory upload --file \path\to\input\d84b53060a3ec89d6d40223941cd0211.xlsx
+```
+
 ## Dependencies
 
 Requires Python 3.7+

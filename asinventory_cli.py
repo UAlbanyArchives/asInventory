@@ -18,6 +18,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     upload_parser = subparsers.add_parser('upload', help='Upload spreadsheet inventories to ArchivesSpace.')
     add_shared_paths(upload_parser)
+    upload_parser.add_argument('--file', dest='file_path', help='Upload only this spreadsheet file.')
     upload_parser.set_defaults(handler=run_upload)
 
     download_parser = subparsers.add_parser('download', help='Download an inventory spreadsheet from ArchivesSpace.')
@@ -45,6 +46,8 @@ def main(argv=None) -> int:
     )
     if hasattr(args, 'record_id'):
         kwargs['record_id'] = args.record_id
+    if hasattr(args, 'file_path'):
+        kwargs['file_path'] = args.file_path
     return args.handler(**kwargs)
 
 

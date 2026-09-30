@@ -112,15 +112,19 @@ def dateCheck(date, errorCount, lineCount, title):
     return errorCount
 
 
-def run_validate(base_dir=None, input_path=None, output_path=None, complete_path=None, dao_path=None, interactive=True):
+def run_validate(base_dir=None, input_path=None, output_path=None, complete_path=None, dao_path=None, interactive=True, file_path=None):
     paths = build_runtime_paths(base_dir, input_path, output_path, complete_path, dao_path)
     ensure_runtime_directories(paths)
     daoFileList.clear()
     totalErrorCount = 0
 
-    for file in os.listdir(paths.input_path):
+    files = [os.path.abspath(file_path)] if file_path else [
+        os.path.join(paths.input_path, file) for file in os.listdir(paths.input_path)
+        if file.endswith(".xlsx")
+    ]
+    for filePath in files:
+        file = os.path.basename(filePath)
         if file.endswith(".xlsx"):
-            filePath = os.path.join(paths.input_path, file)
             refID = os.path.splitext(file)[0].strip()
             wb = openpyxl.load_workbook(filename=filePath, read_only=True)
 
